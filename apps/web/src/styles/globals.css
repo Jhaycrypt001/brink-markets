@@ -189,8 +189,8 @@
     var(--color-highlighter-green)
   );
   background-repeat: no-repeat;
-  background-position: 0 88%;
-  background-size: var(--marker, 0%) 0.42em;
+  background-position: 0 78%;
+  background-size: var(--marker, 0%) 0.34em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   transition: background-size 0.7s cubic-bezier(0.16, 1, 0.3, 1);
