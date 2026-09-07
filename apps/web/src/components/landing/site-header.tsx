@@ -1,45 +1,36 @@
-import { ArrowUpRight } from "lucide-react";
-import { SlideTabs, type SlideTab } from "@/components/ui/slide-tabs";
+import { ArrowUpRight, Activity, Gauge, ShieldCheck, Code2 } from "lucide-react";
+import { NavBar, type NavItem } from "@/components/ui/tubelight-navbar";
+import { GlassButton } from "@/components/ui/glass-button";
 
-const tabs: SlideTab[] = [
-  { id: "markets", label: "Markets", href: "#markets" },
-  { id: "scoring", label: "Scoring", href: "#scoring" },
-  { id: "execution", label: "Execution", href: "#execution" },
-  { id: "api", label: "API", href: "#api" }
+const navItems: NavItem[] = [
+  { name: "Markets", url: "#markets", icon: Activity },
+  { name: "Scoring", url: "#scoring", icon: Gauge },
+  { name: "Execution", url: "#execution", icon: ShieldCheck },
+  { name: "API", url: "#api", icon: Code2 }
 ];
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-press-black/15 bg-bone-white/90 backdrop-blur-md">
-      <div className="page-shell flex min-h-[76px] flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center justify-between gap-6">
-          <a href="#top" className="flex items-baseline gap-2">
-            <span className="font-display text-[1.75rem] leading-none tracking-[-0.04em] text-press-black">
-              Brink
-            </span>
-            <span className="eyebrow hidden text-newsprint-gray sm:block">
-              Markets
-            </span>
-          </a>
-          <a
-            href="#markets"
-            className="inline-flex items-center gap-2 rounded-button bg-highlighter-green px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.11px] text-typesetter-ink shadow-brink transition hover:-translate-y-0.5 lg:hidden"
-          >
-            Live feed
-            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </a>
-        </div>
+    <header className="sticky top-0 z-50 border-b border-press-black/15 bg-bone-white/85 backdrop-blur-md">
+      <div className="page-shell flex min-h-[76px] items-center justify-between gap-6 py-4">
+        <a href="#top" className="flex items-baseline gap-2">
+          <span className="font-display text-[1.75rem] leading-none tracking-[-0.04em] text-press-black">
+            Brink
+          </span>
+          <span className="eyebrow hidden text-newsprint-gray sm:block">Markets</span>
+        </a>
 
-        <nav className="flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:gap-7">
-          <SlideTabs tabs={tabs} />
-          <a
-            href="#markets"
-            className="hidden items-center gap-2 rounded-button bg-highlighter-green px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.11px] text-typesetter-ink shadow-brink transition hover:-translate-y-0.5 lg:inline-flex"
-          >
-            Live feed
-            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </a>
-        </nav>
+        <NavBar items={navItems} className="hidden md:flex" />
+
+        <GlassButton href="#markets" tone="green" contentClassName="gap-2">
+          Live feed
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </GlassButton>
+      </div>
+
+      {/* Compact section nav for narrow screens — icons only. */}
+      <div className="page-shell flex justify-center pb-3 md:hidden">
+        <NavBar items={navItems} />
       </div>
     </header>
   );

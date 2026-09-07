@@ -84,3 +84,125 @@
     font-size: clamp(3rem, 14vw, 4.25rem);
   }
 }
+
+/* -------------------------------------------------------------------------
+   Glass button — the "liquid glass" control (see components/ui/glass-button).
+   A translucent, blurred surface with an inner light edge and a green glow
+   that lifts on hover. Three tones map to the Brink surfaces.
+--------------------------------------------------------------------------- */
+.glass-button-wrap {
+  position: relative;
+  border-radius: var(--radius-pill);
+  isolation: isolate;
+}
+
+.glass-button {
+  position: relative;
+  z-index: 1;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.28s ease;
+}
+
+.glass-button-text {
+  line-height: 1;
+}
+
+/* Blurred glow that reads as the button's shadow. */
+.glass-button-shadow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  filter: blur(14px);
+  opacity: 0.55;
+  transform: translateY(8px) scale(0.92);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  pointer-events: none;
+}
+
+.glass-button-wrap:hover .glass-button {
+  transform: translateY(-2px);
+}
+.glass-button-wrap:hover .glass-button-shadow {
+  opacity: 0.8;
+  transform: translateY(12px) scale(0.95);
+}
+.glass-button:active {
+  transform: translateY(0);
+}
+
+/* Light glass — on the bone canvas. */
+.glass-button--light .glass-button {
+  color: var(--color-press-black);
+  border-color: rgba(18, 22, 19, 0.14);
+  background-image:
+    linear-gradient(rgba(250, 255, 250, 0.72), rgba(250, 255, 250, 0.42)),
+    linear-gradient(120deg, rgba(43, 238, 75, 0.16), rgba(196, 228, 201, 0.14));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 0 rgba(18, 22, 19, 0.06);
+}
+.glass-button--light .glass-button-shadow {
+  background: radial-gradient(closest-side, rgba(16, 94, 29, 0.32), transparent);
+}
+
+/* Green glass — the primary, most saturated action. */
+.glass-button--green .glass-button {
+  color: var(--color-typesetter-ink);
+  border-color: rgba(16, 94, 29, 0.4);
+  background-image:
+    linear-gradient(rgba(43, 238, 75, 0.94), rgba(43, 238, 75, 0.82)),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.25), transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.glass-button--green .glass-button-shadow {
+  background: radial-gradient(closest-side, rgba(16, 94, 29, 0.55), transparent);
+  opacity: 0.75;
+}
+
+/* Dark glass — on the press-black editorial sections. */
+.glass-button--dark .glass-button {
+  color: var(--color-bone-white);
+  border-color: rgba(250, 255, 250, 0.22);
+  background-image:
+    linear-gradient(rgba(35, 41, 36, 0.55), rgba(18, 22, 19, 0.55)),
+    linear-gradient(120deg, rgba(43, 238, 75, 0.18), transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.glass-button--dark .glass-button-shadow {
+  background: radial-gradient(closest-side, rgba(16, 94, 29, 0.45), transparent);
+}
+
+/* Marker highlight — a green "highlighter pen" swipe drawn behind inline text
+   as it scrolls into view. Width is animated from 0 → 100% via the CSS var. */
+.marker-highlight {
+  position: relative;
+  display: inline;
+  background-image: linear-gradient(
+    var(--color-highlighter-green),
+    var(--color-highlighter-green)
+  );
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: var(--marker, 0%) 0.42em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-size 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .glass-button,
+  .glass-button-shadow,
+  .marker-highlight {
+    transition: none;
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { fetchLiveMarkets, type ScoredMarket } from "@/lib/markets";
+import { Reveal } from "@/components/ui/motion";
 import { MarketCard } from "./market-card";
 
 type FeedState = "loading" | "ready" | "empty" | "error";
@@ -28,7 +29,10 @@ export function MarketPreview() {
   return (
     <section id="markets" className="border-b border-press-black/15 py-20 lg:py-28">
       <div className="page-shell">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <Reveal
+          from="up"
+          className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between"
+        >
           <div>
             <p className="eyebrow text-newsprint-gray">Live snapshot</p>
             <h2 className="mt-5 font-display text-[clamp(2.5rem,5vw,4.5rem)] leading-[0.92] tracking-[-0.04em] text-press-black [text-wrap:balance]">
@@ -46,7 +50,7 @@ export function MarketPreview() {
             />
             Refresh
           </button>
-        </div>
+        </Reveal>
         <div className="mt-12 grid gap-px border border-press-black/15 bg-press-black/15 lg:grid-cols-3">
           {state === "loading" &&
             [0, 1, 2].map((card) => (
@@ -59,8 +63,8 @@ export function MarketPreview() {
             ))}
 
           {state === "ready" &&
-            markets.map((market) => (
-              <MarketCard key={market.marketId} market={market} />
+            markets.map((market, index) => (
+              <MarketCard key={market.marketId} market={market} index={index} />
             ))}
 
           {state !== "loading" && state !== "ready" && (

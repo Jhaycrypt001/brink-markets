@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "framer-motion";
 import type { ScoredMarket } from "@/lib/markets";
 
 function formatDuration(seconds: number): string {
@@ -15,9 +16,23 @@ function formatSpread(spread: number | undefined): string {
   return spread === undefined ? "—" : Math.round(spread * 100) + " pts";
 }
 
-export function MarketCard({ market }: { market: ScoredMarket }) {
+export function MarketCard({
+  market,
+  index = 0
+}: {
+  market: ScoredMarket;
+  index?: number;
+}) {
+  const reduceMotion = useReducedMotion();
   return (
-    <article className="flex min-h-[360px] flex-col bg-bone-white p-7">
+    <motion.article
+      initial={reduceMotion ? undefined : { opacity: 0, y: 36 }}
+      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      whileHover={reduceMotion ? undefined : { y: -6 }}
+      viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+      transition={{ duration: 0.55, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
+      className="flex min-h-[360px] flex-col bg-bone-white p-7"
+    >
       <MarketCardHeader market={market} />
       <h3 className="mt-7 font-display text-[1.75rem] leading-[1.05] tracking-[-0.02em] text-press-black [text-wrap:balance]">
         {market.question}
@@ -28,7 +43,7 @@ export function MarketCard({ market }: { market: ScoredMarket }) {
           <li key={reason}>{reason}</li>
         ))}
       </ul>
-    </article>
+    </motion.article>
   );
 }
 

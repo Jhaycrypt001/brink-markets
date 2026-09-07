@@ -1,4 +1,5 @@
 import { ShieldCheck, Wallet, RefreshCw, Timer } from "lucide-react";
+import { Reveal, Stagger, StaggerItem } from "@/components/ui/motion";
 
 const safeguards = [
   {
@@ -27,7 +28,7 @@ export function ExecutionSection() {
   return (
     <section id="execution" className="border-b border-press-black/15 py-20 lg:py-28">
       <div className="page-shell grid gap-14 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] lg:gap-20">
-        <div>
+        <Reveal from="up">
           <p className="eyebrow text-newsprint-gray">Execution boundary</p>
           <h2 className="mt-6 font-display text-[clamp(3rem,6vw,5.5rem)] leading-[0.92] tracking-[-0.04em] text-press-black [text-wrap:balance]">
             Discovery is automatic. Trading is not.
@@ -37,7 +38,7 @@ export function ExecutionSection() {
             hands execution back to the wallet. Every order is explicit,
             user-signed, and based on a fresh market read.
           </p>
-        </div>
+        </Reveal>
         <SafeguardList />
       </div>
     </section>
@@ -46,9 +47,9 @@ export function ExecutionSection() {
 
 function SafeguardList() {
   return (
-    <div className="divide-y divide-press-black/15 border-y border-press-black/15">
+    <Stagger className="divide-y divide-press-black/15 border-y border-press-black/15">
       {safeguards.map((safeguard) => (
-        <div key={safeguard.title} className="flex gap-6 py-7">
+        <StaggerItem key={safeguard.title} from="right" className="flex gap-6 py-7">
           <safeguard.icon className="mt-1 h-5 w-5 shrink-0 text-press-black" aria-hidden="true" />
           <div>
             <h3 className="text-body font-medium text-press-black">{safeguard.title}</h3>
@@ -56,8 +57,8 @@ function SafeguardList() {
               {safeguard.body}
             </p>
           </div>
-        </div>
+        </StaggerItem>
       ))}
-    </div>
+    </Stagger>
   );
 }
