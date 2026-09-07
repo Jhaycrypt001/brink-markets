@@ -1,0 +1,29 @@
+{
+  "name": "brink",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "tsx apps/api/src/server.ts",
+    "dev:web": "npm run dev --workspace @brink/web",
+    "build:api": "tsc -p apps/api/tsconfig.json",
+    "build:web": "npm run build --workspace @brink/web",
+    "typecheck:web": "npm run typecheck --workspace @brink/web",
+    "testnet:wallet": "tsx scripts/testnet-wallet.ts",
+    "test": "vitest run --pool=threads --poolOptions.threads.singleThread"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@somnia-chain/markets-sdk": "^0.29.0",
+    "fastify": "^5.2.1",
+    "zod": "^3.24.1"
+  }
+}

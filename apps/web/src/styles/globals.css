@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bone-white: #fafffa;
+  --color-press-black: #121613;
+  --color-typesetter-ink: #000000;
+  --color-slate-verdant: #232924;
+  --color-newsprint-gray: #516254;
+  --color-muted-sage: #c8d2c8;
+  --color-highlighter-green: #2bee4b;
+  --color-shadow-moss: #93b799;
+  --color-echo-green: #c4e4c9;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", Times, ui-serif, Georgia, serif;
+
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: 1.1;
+  --text-caption--letter-spacing: 0.11px;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.35;
+  --text-body-sm--letter-spacing: 0.14px;
+  --text-body: 1.125rem;
+  --text-body--line-height: 1.45;
+  --text-body--letter-spacing: -0.36px;
+  --text-subheading: 2.75rem;
+  --text-subheading--line-height: 0.95;
+  --text-subheading--letter-spacing: -1.2px;
+  --text-heading: 5rem;
+  --text-heading--line-height: 0.92;
+  --text-heading--letter-spacing: -1.92px;
+
+  --radius-button: 0.3125rem;
+  --radius-card: 0.875rem;
+  --radius-pill: 9999px;
+  --shadow-brink: 1px 8px 20px 0 rgba(16, 94, 29, 0.45);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bone-white);
+    color: var(--color-press-black);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-highlighter-green);
+    color: var(--color-typesetter-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-press-black);
+    outline-offset: 3px;
+  }
+}
+
+.page-shell {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 4rem);
+}
+
+.eyebrow {
+  font-size: var(--text-caption);
+  font-weight: 550;
+  line-height: 1.1;
+  letter-spacing: 0.11px;
+  text-transform: uppercase;
+}
+
+.editorial-image {
+  filter: grayscale(1) saturate(1) invert(0.27) sepia(0.07) saturate(10.67)
+    hue-rotate(80deg) brightness(1.02) contrast(0.83);
+}
+
+@media (max-width: 640px) {
+  .text-heading {
+    font-size: clamp(3rem, 14vw, 4.25rem);
+  }
+}
