@@ -96,7 +96,7 @@ export function HeroSection() {
 
           <Reveal from="up" delay={0.16}>
             <div className="mt-10 flex flex-wrap items-center gap-4">
-              <GlassButton href="#markets" tone="green" size="lg" contentClassName="gap-2">
+              <GlassButton to="/dashboard" tone="green" size="lg" contentClassName="gap-2">
                 View live markets
                 <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </GlassButton>

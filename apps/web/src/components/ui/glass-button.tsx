@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,17 +48,20 @@ const glassButtonTextVariants = cva(
 );
 
 type CommonProps = VariantProps<typeof glassButtonVariants> & {
+  className?: string;
   contentClassName?: string;
   children: React.ReactNode;
 };
 
 type ButtonProps = CommonProps &
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined; to?: undefined };
 
 type AnchorProps = CommonProps &
-  React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; to?: undefined };
 
-export type GlassButtonProps = ButtonProps | AnchorProps;
+type RouterProps = CommonProps & { to: string; href?: undefined };
+
+export type GlassButtonProps = ButtonProps | AnchorProps | RouterProps;
 
 export const GlassButton = React.forwardRef<
   HTMLButtonElement | HTMLAnchorElement,
@@ -73,6 +77,16 @@ export const GlassButton = React.forwardRef<
   );
   const shadow = <span className="glass-button-shadow" aria-hidden="true" />;
   const rootClass = cn("glass-button-wrap", glassButtonVariants({ size, tone }), className);
+
+  if ("to" in props && props.to !== undefined) {
+    const { to } = props as RouterProps;
+    return (
+      <Link to={to} className={rootClass} ref={ref as React.Ref<HTMLAnchorElement>}>
+        {inner}
+        {shadow}
+      </Link>
+    );
+  }
 
   if ("href" in props && props.href !== undefined) {
     const { href, ...anchorProps } = props as AnchorProps;
