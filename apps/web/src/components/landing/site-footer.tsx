@@ -2,6 +2,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Reveal } from "@/components/ui/motion";
 import { GlassButton } from "@/components/ui/glass-button";
 import { DancingLetters } from "@/components/ui/dancing-letters";
+import { BrinkMark } from "@/components/ui/brink-mark";
 
 const footerGroups = [
   {
@@ -41,9 +42,12 @@ export function SiteFooter() {
     <footer className="bg-press-black text-bone-white">
       <div className="page-shell grid gap-12 py-16 lg:grid-cols-[minmax(0,1fr)_repeat(3,180px)] lg:py-24">
         <Reveal from="up">
-          <p className="font-display text-[2.5rem] leading-[1.05] tracking-[-0.04em] text-bone-white">
-            Brink Markets
-          </p>
+          <div className="flex items-center gap-3">
+            <BrinkMark className="h-8 w-8 text-bone-white" />
+            <p className="font-display text-[2.5rem] leading-[1.05] tracking-[-0.04em] text-bone-white">
+              Brink Markets
+            </p>
+          </div>
           <p className="mt-5 max-w-[360px] text-body-sm text-muted-sage">
             A market-discovery and execution layer for DreamDEX event contracts.
             Read-only ranking, wallet-signed trading.

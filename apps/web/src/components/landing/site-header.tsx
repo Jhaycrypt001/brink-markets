@@ -2,6 +2,7 @@ import { ArrowUpRight, Activity, Gauge, ShieldCheck, Code2, BookOpen } from "luc
 import { Link } from "react-router-dom";
 import { NavBar, type NavItem } from "@/components/ui/tubelight-navbar";
 import { GlassButton } from "@/components/ui/glass-button";
+import { BrinkMark } from "@/components/ui/brink-mark";
 
 const navItems: NavItem[] = [
   { name: "Markets", url: "/#markets", icon: Activity },
@@ -15,7 +16,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-press-black/15 bg-bone-white/85 backdrop-blur-md">
       <div className="page-shell flex min-h-[76px] items-center justify-between gap-4 py-4">
-        <Link to="/" className="flex shrink-0 items-baseline gap-2">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="Brink — home">
+          <BrinkMark className="h-6 w-6 text-press-black" />
           <span className="font-display text-[1.75rem] leading-none tracking-[-0.04em] text-press-black">
             Brink
           </span>
