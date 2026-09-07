@@ -1,8 +1,10 @@
+import { Reveal } from "@/components/ui/motion";
+
 export function ApiSection() {
   return (
     <section id="api" className="bg-press-black py-20 text-bone-white lg:py-28">
       <div className="page-shell grid gap-12 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)] lg:gap-20">
-        <div>
+        <Reveal from="up">
           <p className="eyebrow text-muted-sage">Read-only contract</p>
           <h2 className="mt-6 font-display text-[clamp(3rem,6vw,5.5rem)] leading-[0.92] tracking-[-0.04em] text-bone-white [text-wrap:balance]">
             One endpoint. One snapshot.
@@ -12,8 +14,10 @@ export function ApiSection() {
             Each result carries quotes, spread, time left, tradeability, and the
             reasons behind the decision.
           </p>
-        </div>
-        <ApiContract />
+        </Reveal>
+        <Reveal from="up" delay={0.1}>
+          <ApiContract />
+        </Reveal>
       </div>
     </section>
   );

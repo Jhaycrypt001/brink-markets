@@ -1,3 +1,5 @@
+import { Reveal, Stagger, StaggerItem } from "@/components/ui/motion";
+
 const scoringRules = [
   {
     points: "35",
@@ -25,7 +27,7 @@ export function ScoringSection() {
   return (
     <section id="scoring" className="bg-press-black py-20 text-bone-white lg:py-28">
       <div className="page-shell grid gap-14 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-20">
-        <div>
+        <Reveal from="up">
           <p className="eyebrow text-muted-sage">Deterministic score</p>
           <h2 className="mt-6 font-display text-[clamp(3rem,6vw,5.5rem)] leading-[0.92] tracking-[-0.04em] text-bone-white [text-wrap:balance]">
             Every Brink score is inspectable.
@@ -35,7 +37,7 @@ export function ScoringSection() {
             reasons for every market. No model decides what to trade, and no
             score can override an on-chain gate.
           </p>
-        </div>
+        </Reveal>
         <ScoringLedger />
       </div>
     </section>
@@ -44,10 +46,11 @@ export function ScoringSection() {
 
 function ScoringLedger() {
   return (
-    <div className="divide-y divide-bone-white/20 border-y border-bone-white/20">
+    <Stagger className="divide-y divide-bone-white/20 border-y border-bone-white/20">
       {scoringRules.map((rule) => (
-        <div
+        <StaggerItem
           key={rule.title}
+          from="right"
           className="grid gap-4 py-7 md:grid-cols-[92px_minmax(0,1fr)] md:gap-8"
         >
           <span className="font-display text-[2.5rem] leading-none text-highlighter-green">
@@ -59,8 +62,8 @@ function ScoringLedger() {
               {rule.body}
             </p>
           </div>
-        </div>
+        </StaggerItem>
       ))}
-    </div>
+    </Stagger>
   );
 }
