@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { Reveal } from "@/components/ui/motion";
 import { GlassButton } from "@/components/ui/glass-button";
+import { DancingLetters } from "@/components/ui/dancing-letters";
 
 const footerGroups = [
   {
@@ -90,9 +91,10 @@ export function SiteFooter() {
               </span>
             ))}
           </div>
-          <p className="mt-10 overflow-hidden pb-[0.12em] font-display text-[clamp(5rem,17vw,15rem)] leading-[0.92] tracking-[-0.05em] text-press-black">
-            Brink
-          </p>
+          <DancingLetters
+            text="Brink"
+            className="mt-10 pb-[0.12em] font-display text-[clamp(5rem,17vw,15rem)] leading-[0.92] tracking-[-0.05em] text-press-black"
+          />
         </div>
       </div>
     </footer>
