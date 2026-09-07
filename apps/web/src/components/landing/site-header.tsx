@@ -27,7 +27,7 @@ export function SiteHeader() {
         <NavBar items={navItems} className="hidden lg:flex" />
 
         <GlassButton
-          href="/#markets"
+          to="/dashboard"
           tone="green"
           contentClassName="gap-2"
           className="hidden sm:inline-flex"

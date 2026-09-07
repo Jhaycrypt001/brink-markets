@@ -53,7 +53,7 @@ export function SiteFooter() {
             Read-only ranking, wallet-signed trading.
           </p>
           <GlassButton
-            href="#markets"
+            to="/dashboard"
             tone="dark"
             contentClassName="gap-2"
             className="mt-7"

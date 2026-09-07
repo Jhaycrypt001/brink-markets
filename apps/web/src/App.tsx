@@ -4,11 +4,12 @@ import { SiteHeader } from "@/components/landing/site-header";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { LandingPage } from "@/pages/landing-page";
 import { DocsPage } from "@/pages/docs-page";
+import { DashboardPage } from "@/pages/dashboard-page";
 
 /**
  * On navigation, jump to the hash target if there is one (so "/#markets" from
  * another page lands on that section), otherwise scroll to the top of the new
- * page. Respects the browser's reduced-motion behavior via CSS.
+ * page.
  */
 function ScrollManager() {
   const { pathname, hash } = useLocation();
@@ -28,16 +29,22 @@ function ScrollManager() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
+  // The dashboard is the "app" surface — it carries its own chrome, so the
+  // marketing header/footer are hidden there.
+  const isApp = pathname.startsWith("/dashboard");
+
   return (
     <>
       <ScrollManager />
-      <SiteHeader />
+      {!isApp && <SiteHeader />}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/docs" element={<DocsPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="*" element={<LandingPage />} />
       </Routes>
-      <SiteFooter />
+      {!isApp && <SiteFooter />}
     </>
   );
 }
