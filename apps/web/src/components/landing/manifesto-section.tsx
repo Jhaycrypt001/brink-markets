@@ -40,7 +40,7 @@ export function ManifestoSection() {
       <div className="sticky top-0 flex min-h-screen items-center overflow-hidden py-24">
         <div className="page-shell">
           <p className="eyebrow text-highlighter-green">The premise</p>
-          <h2 className="mt-8 max-w-[1180px] font-display text-[clamp(2rem,6.4vw,5.5rem)] font-normal leading-[1.34] tracking-[-0.02em]">
+          <h2 className="mt-8 flex max-w-[1180px] flex-col gap-y-2 font-display text-[clamp(1.9rem,5.6vw,4.75rem)] font-normal leading-[1.2] tracking-[-0.02em] sm:gap-y-3">
             {lines.map((line) => {
               if (!line.highlight) {
                 return (
@@ -85,7 +85,7 @@ function HighlightedLine({
   return (
     <span className="block">
       <motion.span
-        className="marker-highlight box-decoration-clone px-1 text-press-black"
+        className="marker-highlight box-decoration-clone text-bone-white"
         style={
           reduceMotion
             ? ({ ["--marker" as string]: "100%" } as CSSProperties)

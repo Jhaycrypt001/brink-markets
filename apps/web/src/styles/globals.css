@@ -179,18 +179,20 @@
   background: radial-gradient(closest-side, rgba(16, 94, 29, 0.45), transparent);
 }
 
-/* Marker highlight — a green "highlighter pen" swipe drawn behind inline text
-   as it scrolls into view. Width is animated from 0 → 100% via the CSS var. */
+/* Marker underline — a green "highlighter" bar that grows along the BASELINE of
+   inline text as it scrolls into view (never a fill behind the glyphs, so text
+   stays readable and lines can never overlap). Width animates 0 → 100%. */
 .marker-highlight {
   position: relative;
   display: inline;
+  padding-bottom: 0.08em;
   background-image: linear-gradient(
     var(--color-highlighter-green),
     var(--color-highlighter-green)
   );
   background-repeat: no-repeat;
-  background-position: 0 78%;
-  background-size: var(--marker, 0%) 0.34em;
+  background-position: 0 100%;
+  background-size: var(--marker, 0%) 0.12em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   transition: background-size 0.7s cubic-bezier(0.16, 1, 0.3, 1);
