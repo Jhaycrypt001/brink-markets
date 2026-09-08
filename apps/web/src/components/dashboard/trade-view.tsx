@@ -7,7 +7,6 @@ import { PriceChart } from "./price-chart";
 import { OrderBook } from "./order-book";
 import { TradeTicket } from "./trade-ticket";
 import { OpenOrdersStrip, useOpenOrders } from "./positions-panel";
-import type { PricePoint } from "./use-market-feed";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -16,14 +15,12 @@ export function TradeView({
   markets,
   selected,
   onSelect,
-  elapsed,
-  history
+  elapsed
 }: {
   markets: ScoredMarket[];
   selected: ScoredMarket;
   onSelect: (market: ScoredMarket) => void;
   elapsed: number;
-  history: PricePoint[];
 }) {
   const account = useActiveAccount();
   const openOrders = useOpenOrders(account);
@@ -38,7 +35,7 @@ export function TradeView({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className={cn(PANEL, "min-h-[320px] overflow-hidden")}>
-          <PriceChart market={selected} history={history} />
+          <PriceChart market={selected} />
         </div>
         <div className="grid gap-4">
           <div className={cn(PANEL, "overflow-hidden")}>

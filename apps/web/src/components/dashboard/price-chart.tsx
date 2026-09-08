@@ -1,94 +1,191 @@
-import { useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  createChart,
+  ColorType,
+  CrosshairMode,
+  type IChartApi,
+  type ISeriesApi,
+  type IPriceLine,
+  type UTCTimestamp
+} from "lightweight-charts";
 import { Activity } from "lucide-react";
 import type { ScoredMarket } from "@/lib/markets";
-import type { PricePoint } from "./use-market-feed";
+import { fetchOHLCV } from "@/lib/markets";
+import { cn } from "@/lib/utils";
+
+const TIMEFRAMES = ["5m", "15m", "1h", "4h"] as const;
+type TF = (typeof TIMEFRAMES)[number];
+
+const GREEN = "#2bee4b";
+const RED = "#e08a8a";
 
 /**
- * PriceChart — the live YES-price line for a market, drawn from real observed
- * quotes accumulated by the feed. No synthetic history: until at least two ticks
- * have arrived it shows a "building" state, then renders the real series with a
- * pulsing live point and a price axis in cents.
+ * PriceChart — real candlesticks via TradingView Lightweight Charts, fed by the
+ * API's /v1/ohlcv (SDK fetchOHLCV). Values are the outcome's YES price in human
+ * units (0..1), formatted as cents on the axis. A green price line tracks the
+ * live best-ask, and the newest candle's close is nudged to it between refreshes.
  */
-export function PriceChart({ market, history }: { market: ScoredMarket; history: PricePoint[] }) {
-  const yesPrice = Math.round((market.bestAsk ?? 0.5) * 100);
+export function PriceChart({ market }: { market: ScoredMarket }) {
+  const [tf, setTf] = useState<TF>("1h");
+  const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
 
-  const view = useMemo(() => {
-    if (history.length < 2) return null;
-    const prices = history.map((h) => h.p);
-    const rawHi = Math.max(...prices);
-    const rawLo = Math.min(...prices);
-    const pad = Math.max(2, (rawHi - rawLo) * 0.25);
-    const hi = Math.min(100, rawHi + pad);
-    const lo = Math.max(0, rawLo - pad);
-    const span = Math.max(1, hi - lo);
-    const n = history.length;
-    const pts = history.map((h, i) => {
-      const x = (i / (n - 1)) * 100;
-      const y = ((hi - h.p) / span) * 100;
-      return { x, y };
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const priceLineRef = useRef<IPriceLine | null>(null);
+
+  const yes = market.bestAsk ?? 0.5;
+
+  // Create the chart once.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const chart = createChart(container, {
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: "rgba(200,210,200,0.5)",
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+      },
+      grid: {
+        vertLines: { color: "rgba(255,255,255,0.04)" },
+        horzLines: { color: "rgba(255,255,255,0.04)" }
+      },
+      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)" },
+      timeScale: { borderColor: "rgba(255,255,255,0.06)", timeVisible: true, secondsVisible: false },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: { color: "rgba(255,255,255,0.2)", labelBackgroundColor: "#232924" },
+        horzLine: { color: "rgba(255,255,255,0.2)", labelBackgroundColor: "#232924" }
+      },
+      autoSize: true,
+      handleScale: { axisPressedMouseMove: true },
+      localization: {
+        priceFormatter: (p: number) => Math.round(p * 100) + "¢"
+      }
     });
-    const line = pts.map((p) => `${p.x},${p.y}`).join(" ");
-    const area = `0,100 ${line} 100,100`;
-    const last = pts[pts.length - 1];
-    const first = history[0].p;
-    const changePct = first === 0 ? 0 : Math.round(((history[n - 1].p - first) / first) * 1000) / 10;
-    return { line, area, last, hi, lo, changePct };
-  }, [history]);
+
+    const series = chart.addCandlestickSeries({
+      upColor: GREEN,
+      downColor: RED,
+      borderVisible: false,
+      wickUpColor: GREEN,
+      wickDownColor: RED,
+      priceFormat: { type: "custom", formatter: (p: number) => Math.round(p * 100) + "¢", minMove: 0.01 }
+    });
+
+    chartRef.current = chart;
+    seriesRef.current = series;
+
+    return () => {
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      priceLineRef.current = null;
+    };
+  }, []);
+
+  // Load candles when the market or timeframe changes, then poll for updates.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const candles = await fetchOHLCV(market.symbol, tf, 200);
+        if (cancelled || !seriesRef.current) return;
+        if (candles.length === 0) {
+          seriesRef.current.setData([]);
+          setState("empty");
+          return;
+        }
+        seriesRef.current.setData(
+          candles.map((c) => ({
+            time: Math.floor(c[0] / 1000) as UTCTimestamp,
+            open: c[1],
+            high: c[2],
+            low: c[3],
+            close: c[4]
+          }))
+        );
+        chartRef.current?.timeScale().fitContent();
+        setState("ready");
+      } catch {
+        if (!cancelled) setState("error");
+      }
+    }
+
+    setState((s) => (s === "ready" ? s : "loading"));
+    void load();
+    const id = window.setInterval(load, 20000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [market.symbol, tf]);
+
+  // Keep a live price line at the current best-ask, and nudge the last candle.
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || state !== "ready") return;
+    if (priceLineRef.current) series.removePriceLine(priceLineRef.current);
+    priceLineRef.current = series.createPriceLine({
+      price: yes,
+      color: GREEN,
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: "live"
+    });
+  }, [yes, state]);
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
-        <span className="inline-flex items-center gap-1.5 rounded-md bg-highlighter-green/12 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-highlighter-green">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-highlighter-green opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-highlighter-green" />
-          </span>
-          Live
-        </span>
-        {view && (
-          <span className={"text-[12px] font-semibold tabular-nums " + (view.changePct >= 0 ? "text-highlighter-green" : "text-[#e08a8a]")}>
-            {view.changePct >= 0 ? "+" : ""}{view.changePct}% session
-          </span>
-        )}
+      <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
+        <div className="flex items-center gap-1 rounded-lg bg-white/[0.03] p-0.5">
+          {TIMEFRAMES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTf(t)}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                tf === t ? "bg-white/[0.08] text-bone-white" : "text-muted-sage/60 hover:text-bone-white"
+              )}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <LiveTag />
       </div>
 
-      <div className="relative min-h-[240px] flex-1 pr-12">
-        {!view ? (
-          <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 text-center">
+      <div className="relative min-h-[260px] flex-1">
+        <div ref={containerRef} className="absolute inset-0" />
+        {state !== "ready" && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
             <Activity className="h-6 w-6 text-muted-sage/40" />
-            <p className="text-[13px] text-muted-sage/55">Building the live chart from the feed…</p>
-            <p className="text-[11px] text-muted-sage/35">Quotes plot here as they stream in.</p>
+            <p className="text-[13px] text-muted-sage/55">
+              {state === "loading"
+                ? "Loading candles…"
+                : state === "empty"
+                  ? "No trade history for this market yet."
+                  : "Chart data is unavailable."}
+            </p>
           </div>
-        ) : (
-          <>
-            <div className="absolute inset-0 pr-12">
-              {[0, 25, 50, 75, 100].map((p) => (
-                <div key={p} className="absolute left-0 right-0 border-t border-white/[0.04]" style={{ top: p + "%" }} />
-              ))}
-            </div>
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full pr-12">
-              <defs>
-                <linearGradient id="pc-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-highlighter-green)" stopOpacity="0.28" />
-                  <stop offset="100%" stopColor="var(--color-highlighter-green)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polygon points={view.area} fill="url(#pc-fill)" />
-              <polyline points={view.line} fill="none" stroke="var(--color-highlighter-green)" strokeWidth="0.7" vectorEffect="non-scaling-stroke" />
-            </svg>
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-12">
-              {[view.hi, (view.hi + view.lo) / 2, view.lo].map((p, i) => (
-                <span key={i} className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-muted-sage/45" style={{ top: (i === 0 ? 2 : i === 1 ? 50 : 98) + "%" }}>
-                  {Math.round(p)}¢
-                </span>
-              ))}
-              <span className="absolute right-1 -translate-y-1/2 rounded bg-highlighter-green px-1 py-0.5 text-[10px] font-bold tabular-nums text-press-black" style={{ top: view.last.y + "%" }}>
-                {yesPrice}¢
-              </span>
-            </div>
-          </>
         )}
       </div>
     </div>
+  );
+}
+
+function LiveTag() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-highlighter-green/12 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-highlighter-green">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-highlighter-green opacity-75" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-highlighter-green" />
+      </span>
+      Live
+    </span>
   );
 }

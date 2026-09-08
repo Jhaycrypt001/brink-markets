@@ -56,6 +56,28 @@ export async function fetchMarkets(limit = 24): Promise<ScoredMarket[]> {
   return payload.data ?? [];
 }
 
+/** OHLCV candle: [openTimeMs, open, high, low, close, volume]. */
+export type Candle = [number, number, number, number, number, number];
+
+export async function fetchOHLCV(
+  symbol: string,
+  timeframe = "1h",
+  limit = 200
+): Promise<Candle[]> {
+  const url =
+    apiBaseUrl +
+    "/v1/ohlcv?symbol=" +
+    encodeURIComponent(symbol) +
+    "&tf=" +
+    encodeURIComponent(timeframe) +
+    "&limit=" +
+    limit;
+  const response = await fetch(url, { headers: { accept: "application/json" } });
+  if (!response.ok) throw new Error("MARKET_SOURCE_UNAVAILABLE");
+  const payload: { data?: Candle[] } = await response.json();
+  return payload.data ?? [];
+}
+
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   if (s < 60) return s + "s";

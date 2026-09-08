@@ -13,6 +13,12 @@ const marketQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(100)
 });
 
+const ohlcvQuerySchema = z.object({
+  symbol: z.string().trim().min(1).max(120),
+  tf: z.enum(["5m", "15m", "1h", "4h", "1d"]).default("1h"),
+  limit: z.coerce.number().int().min(1).max(500).default(200)
+});
+
 export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOrigin: string, staleCacheMs = 30_000, maxResults = 100): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
   const cache = new TtlCache<BinaryMarket[]>(cacheTtlMs, staleCacheMs);
@@ -41,6 +47,19 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
     } catch (error) {
       if (error instanceof z.ZodError) return reply.code(400).send({ error: { code: "INVALID_QUERY", requestId: request.id } });
       request.log.error(error, "market discovery failed");
+      return reply.code(502).send({ error: { code: "MARKET_SOURCE_UNAVAILABLE", requestId: request.id } });
+    }
+  });
+
+  app.get<{ Querystring: { symbol?: string; tf?: string; limit?: string } }>("/v1/ohlcv", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+    try {
+      const query = ohlcvQuerySchema.parse(request.query);
+      const candles = await source.fetchOHLCV(query.symbol, query.tf, query.limit);
+      return { data: candles, meta: { symbol: query.symbol, tf: query.tf, count: candles.length, requestId: request.id } };
+    } catch (error) {
+      if (error instanceof z.ZodError) return reply.code(400).send({ error: { code: "INVALID_QUERY", requestId: request.id } });
+      request.log.error(error, "ohlcv fetch failed");
       return reply.code(502).send({ error: { code: "MARKET_SOURCE_UNAVAILABLE", requestId: request.id } });
     }
   });
