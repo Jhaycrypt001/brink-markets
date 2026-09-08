@@ -130,7 +130,6 @@ function DashboardInner() {
                   selected={selected}
                   onSelect={(m) => setSelectedId(m.marketId)}
                   elapsed={feed.elapsed}
-                  history={feed.historyFor(selected.marketId)}
                 />
               ) : (
                 <FeedState source={feed.source} />

@@ -1,8 +1,12 @@
 import type { BinaryMarket } from "../domain/market.js";
 import { isBinaryMarket, type SomniaMarkets } from "@somnia-chain/markets-sdk";
 
+/** OHLCV candle in ccxt shape: [openTimeMs, open, high, low, close, volume]. */
+export type Candle = [number, number, number, number, number, number];
+
 export interface MarketSource {
   listLiveBinaryMarkets(): Promise<BinaryMarket[]>;
+  fetchOHLCV(symbol: string, timeframe: string, limit: number): Promise<Candle[]>;
 }
 
 /**
@@ -42,10 +46,20 @@ export class DreamDexMarketSource implements MarketSource {
     }
     return markets;
   }
+
+  public async fetchOHLCV(symbol: string, timeframe: string, limit: number): Promise<Candle[]> {
+    await this.exchange.loadMarkets();
+    const rows = await this.exchange.fetchOHLCV(symbol, timeframe, undefined, limit);
+    return rows as Candle[];
+  }
 }
 
 export class EmptyMarketSource implements MarketSource {
   public async listLiveBinaryMarkets(): Promise<BinaryMarket[]> {
+    return [];
+  }
+
+  public async fetchOHLCV(): Promise<Candle[]> {
     return [];
   }
 }
