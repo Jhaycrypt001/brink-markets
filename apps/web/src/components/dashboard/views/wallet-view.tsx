@@ -3,6 +3,7 @@ import { Wallet as WalletIcon, ShieldCheck, ArrowDownToLine, Copy, Check, Extern
 import { motion, AnimatePresence } from "framer-motion";
 import { useWalletBalance } from "thirdweb/react";
 import { useWallet, shortAddress, somniaShannon, thirdwebClient } from "@/components/dashboard/wallet";
+import { PositionsPanel } from "@/components/dashboard/positions-panel";
 import { PANEL, PageHeader } from "./_shared";
 import { cn } from "@/lib/utils";
 
@@ -60,12 +61,7 @@ export function WalletView() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <BalanceCard address={wallet.address ?? ""} onDeposit={() => setDepositOpen(true)} />
-          <div className={cn(PANEL, "p-5")}>
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-sage/70">Open positions</p>
-            <div className="mt-4 rounded-lg border border-dashed border-white/[0.1] py-8 text-center text-[13px] text-muted-sage/50">
-              No open positions. Signed orders will appear here.
-            </div>
-          </div>
+          <PositionsPanel />
         </div>
 
         <div className="space-y-4">
