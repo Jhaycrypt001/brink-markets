@@ -4,6 +4,7 @@ import type { ScoredMarket } from "@/lib/markets";
 import { formatDuration, formatCompact } from "@/lib/markets";
 import { PriceChart } from "./price-chart";
 import { OrderBook } from "./order-book";
+import { TradeTicket } from "./trade-ticket";
 import type { PricePoint } from "./use-market-feed";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +31,13 @@ export function TradeView({
         <div className={cn(PANEL, "min-h-[320px] overflow-hidden")}>
           <PriceChart market={selected} history={history} />
         </div>
-        <div className={cn(PANEL, "overflow-hidden")}>
-          <OrderBook market={selected} />
+        <div className="grid gap-4">
+          <div className={cn(PANEL, "overflow-hidden")}>
+            <OrderBook market={selected} />
+          </div>
+          <div className={cn(PANEL, "overflow-hidden")}>
+            <TradeTicket market={selected} />
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchMarkets, type ScoredMarket } from "@/lib/markets";
 import { usePrefs, notify } from "./prefs";
+import { useNotifications } from "./notifications";
 
 export type FeedSource = "live" | "empty" | "offline";
 export type PricePoint = { t: number; p: number };
@@ -13,6 +14,9 @@ export type PricePoint = { t: number; p: number };
  */
 export function useMarketFeed(pollMs = 5000) {
   const prefs = usePrefs();
+  const inbox = useNotifications();
+  const inboxRef = useRef(inbox);
+  inboxRef.current = inbox;
   const [markets, setMarkets] = useState<ScoredMarket[]>([]);
   const [source, setSource] = useState<FeedSource>("offline");
   const [loading, setLoading] = useState(true);
@@ -43,13 +47,16 @@ export function useMarketFeed(pollMs = 5000) {
 
       const P = prefsRef.current;
       const nowTradeable = new Set(data.filter((m) => m.tradeable).map((m) => m.marketId));
+      const seenBefore = prevTradeable.current.size > 0 || warnedExpiry.current.size > 0;
       for (const m of data) {
         if (m.tradeable && !prevTradeable.current.has(m.marketId)) {
           if (P.fillSounds) P.playTick();
+          inboxRef.current.push("Market tradeable", m.question);
           if (P.tradeableAlerts) notify("Market tradeable", m.question);
         }
         if (m.secondsLeft > 0 && m.secondsLeft <= 60 && !warnedExpiry.current.has(m.marketId)) {
           warnedExpiry.current.add(m.marketId);
+          if (seenBefore) inboxRef.current.push("Expiry soon", m.question + " — under a minute left");
           if (P.expiryWarnings) notify("Expiry soon", m.question + " — under a minute left");
         }
       }

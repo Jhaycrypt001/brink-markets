@@ -1,11 +1,17 @@
-import { Wallet as WalletIcon, ShieldCheck, ArrowDownToLine, Copy, Check } from "lucide-react";
 import { useState } from "react";
-import { useWallet, shortAddress } from "@/components/dashboard/wallet";
+import { Wallet as WalletIcon, ShieldCheck, ArrowDownToLine, Copy, Check, ExternalLink, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useWalletBalance } from "thirdweb/react";
+import { useWallet, shortAddress, somniaShannon, thirdwebClient } from "@/components/dashboard/wallet";
 import { PANEL, PageHeader } from "./_shared";
 import { cn } from "@/lib/utils";
 
+const FAUCET_URL = "https://testnet.somnia.network/";
+const EXPLORER = "https://shannon-explorer.somnia.network/address/";
+
 export function WalletView() {
   const wallet = useWallet();
+  const [depositOpen, setDepositOpen] = useState(false);
 
   if (!wallet.ready) {
     return (
@@ -20,7 +26,7 @@ export function WalletView() {
           </h2>
           <p className="mt-3 text-[13px] text-muted-sage/60">
             {wallet.status === "connected"
-              ? "You're connected — switch to the Somnia Shannon network to continue."
+              ? "You're connected — switch to Somnia Shannon to continue."
               : "Discovery is read-only. Connect a wallet only when you're ready to sign."}
           </p>
           <button
@@ -53,15 +59,7 @@ export function WalletView() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
-          <div className={cn(PANEL, "p-5")}>
-            <p className="text-[11px] uppercase tracking-wider text-muted-sage/45">Balance</p>
-            <p className="mt-2 font-display text-[3rem] leading-none tracking-[-0.03em] text-bone-white">$0.00</p>
-            <p className="mt-2 text-[13px] text-muted-sage/55">0.00 USDC · fund to start signing orders.</p>
-            <button className="mt-5 inline-flex items-center gap-2 rounded-lg bg-highlighter-green px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-press-black">
-              <ArrowDownToLine className="h-4 w-4" /> Deposit
-            </button>
-          </div>
-
+          <BalanceCard address={wallet.address ?? ""} onDeposit={() => setDepositOpen(true)} />
           <div className={cn(PANEL, "p-5")}>
             <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-sage/70">Open positions</p>
             <div className="mt-4 rounded-lg border border-dashed border-white/[0.1] py-8 text-center text-[13px] text-muted-sage/50">
@@ -84,6 +82,35 @@ export function WalletView() {
           </div>
         </div>
       </div>
+
+      <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} address={wallet.address ?? ""} />
+    </div>
+  );
+}
+
+function BalanceCard({ address, onDeposit }: { address: string; onDeposit: () => void }) {
+  const { data, isLoading } = useWalletBalance({
+    client: thirdwebClient!,
+    chain: somniaShannon,
+    address
+  });
+
+  return (
+    <div className={cn(PANEL, "p-5")}>
+      <p className="text-[11px] uppercase tracking-wider text-muted-sage/45">Balance</p>
+      <p className="mt-2 font-display text-[3rem] leading-none tracking-[-0.03em] text-bone-white tabular-nums">
+        {isLoading ? "…" : `${Number(data?.displayValue ?? 0).toFixed(4)}`}
+        <span className="ml-2 text-[1.25rem] text-muted-sage/60">{data?.symbol ?? "STT"}</span>
+      </p>
+      <p className="mt-2 text-[13px] text-muted-sage/55">
+        Live Somnia balance. Fund your wallet to sign orders.
+      </p>
+      <button
+        onClick={onDeposit}
+        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-highlighter-green px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
+      >
+        <ArrowDownToLine className="h-4 w-4" /> Deposit
+      </button>
     </div>
   );
 }
@@ -101,10 +128,83 @@ function AddressCard({ address }: { address: string }) {
       <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-sage/70">Address</p>
       <div className="mt-3 flex items-center justify-between">
         <span className="text-[13px] tabular-nums text-bone-white">{shortAddress(address)}</span>
-        <button onClick={copy} className="rounded-md p-1.5 text-muted-sage/60 hover:text-bone-white" aria-label="Copy address">
-          {copied ? <Check className="h-4 w-4 text-highlighter-green" /> : <Copy className="h-4 w-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={copy} className="rounded-md p-1.5 text-muted-sage/60 hover:text-bone-white" aria-label="Copy address">
+            {copied ? <Check className="h-4 w-4 text-highlighter-green" /> : <Copy className="h-4 w-4" />}
+          </button>
+          <a
+            href={EXPLORER + address}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md p-1.5 text-muted-sage/60 hover:text-bone-white"
+            aria-label="View on explorer"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
       </div>
     </div>
+  );
+}
+
+function DepositModal({ open, onClose, address }: { open: boolean; onClose: () => void; address: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard?.writeText(address).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    }, () => undefined);
+  }
+  return (
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <motion.div className="absolute inset-0 bg-black/70 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div
+            className="relative w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#121613] p-6 shadow-2xl"
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 12 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          >
+            <button type="button" onClick={onClose} className="absolute right-4 top-4 rounded-md p-1 text-muted-sage/50 hover:text-bone-white" aria-label="Close">
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-highlighter-green/12 text-highlighter-green">
+                <ArrowDownToLine className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-[15px] font-semibold text-bone-white">Fund your wallet</h2>
+                <p className="text-[12px] text-muted-sage/55">Somnia Shannon testnet</p>
+              </div>
+            </div>
+
+            <p className="mt-5 text-[13px] leading-relaxed text-muted-sage/70">
+              Get free testnet tokens from the Somnia faucet, or send funds to your address below.
+            </p>
+
+            <div className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-sage/45">Your address</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="break-all text-[12px] tabular-nums text-bone-white">{address}</span>
+                <button onClick={copy} className="shrink-0 rounded-md p-1.5 text-muted-sage/60 hover:text-bone-white" aria-label="Copy">
+                  {copied ? <Check className="h-4 w-4 text-highlighter-green" /> : <Copy className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <a
+              href={FAUCET_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-highlighter-green py-3 text-[12px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
+            >
+              Open Somnia faucet <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

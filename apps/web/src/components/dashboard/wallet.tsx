@@ -18,7 +18,8 @@ import {
  */
 
 const CLIENT_ID = (import.meta.env as Record<string, string | undefined>).VITE_THIRDWEB_CLIENT_ID;
-const client = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : undefined;
+export const thirdwebClient = CLIENT_ID ? createThirdwebClient({ clientId: CLIENT_ID }) : undefined;
+const client = thirdwebClient;
 
 export const somniaShannon = defineChain({
   id: 50312,
