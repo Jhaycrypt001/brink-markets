@@ -95,7 +95,7 @@ export function AppSidebar({
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-2.5 py-4">
+      <nav className="no-scrollbar flex-1 overflow-y-auto px-2.5 py-4">
         {collapsed && (
           <button
             type="button"
