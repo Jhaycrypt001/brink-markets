@@ -32,6 +32,7 @@ export function PriceChart({ market }: { market: ScoredMarket }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const volumeRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const priceLineRef = useRef<IPriceLine | null>(null);
 
   const yes = market.bestAsk ?? 0.5;
@@ -73,14 +74,26 @@ export function PriceChart({ market }: { market: ScoredMarket }) {
       wickDownColor: RED,
       priceFormat: { type: "custom", formatter: (p: number) => Math.round(p * 100) + "¢", minMove: 0.01 }
     });
+    // Leave the bottom fifth of the pane for the volume histogram.
+    series.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.24 } });
+
+    const volume = chart.addHistogramSeries({
+      priceScaleId: "vol",
+      priceFormat: { type: "volume" },
+      lastValueVisible: false,
+      priceLineVisible: false
+    });
+    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
 
     chartRef.current = chart;
     seriesRef.current = series;
+    volumeRef.current = volume;
 
     return () => {
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      volumeRef.current = null;
       priceLineRef.current = null;
     };
   }, []);
@@ -95,6 +108,7 @@ export function PriceChart({ market }: { market: ScoredMarket }) {
         if (cancelled || !seriesRef.current) return;
         if (candles.length === 0) {
           seriesRef.current.setData([]);
+          volumeRef.current?.setData([]);
           setState("empty");
           return;
         }
@@ -105,6 +119,13 @@ export function PriceChart({ market }: { market: ScoredMarket }) {
             high: c[2],
             low: c[3],
             close: c[4]
+          }))
+        );
+        volumeRef.current?.setData(
+          candles.map((c) => ({
+            time: Math.floor(c[0] / 1000) as UTCTimestamp,
+            value: c[5],
+            color: c[4] >= c[1] ? "rgba(43,238,75,0.35)" : "rgba(224,138,138,0.35)"
           }))
         );
         chartRef.current?.timeScale().fitContent();
