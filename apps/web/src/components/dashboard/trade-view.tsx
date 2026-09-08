@@ -5,6 +5,7 @@ import { formatDuration, formatCompact } from "@/lib/markets";
 import { PriceChart } from "./price-chart";
 import { OrderBook } from "./order-book";
 import { TradeTicket } from "./trade-ticket";
+import { OpenOrdersStrip } from "./positions-panel";
 import type { PricePoint } from "./use-market-feed";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,8 @@ export function TradeView({
           </div>
         </div>
       </div>
+
+      <OpenOrdersStrip />
 
       <MarketsTable markets={markets} selected={selected} onSelect={onSelect} elapsed={elapsed} />
     </div>

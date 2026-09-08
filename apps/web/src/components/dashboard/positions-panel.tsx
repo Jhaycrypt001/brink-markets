@@ -157,6 +157,88 @@ export function PositionsPanel() {
   );
 }
 
+/**
+ * OpenOrdersStrip — a compact, in-context row of the wallet's resting orders for
+ * the Trade view. Shows a slim "no open orders" line when empty; each order is a
+ * chip with a wallet-signed cancel. Polls every 8s.
+ */
+export function OpenOrdersStrip() {
+  const account = useActiveAccount();
+  const inbox = useNotifications();
+  const [orders, setOrders] = useState<OpenOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!account) return;
+    try {
+      setOrders(await fetchOpenOrders(account));
+    } catch {
+      /* keep last known; the Wallet panel surfaces errors */
+    } finally {
+      setLoading(false);
+    }
+  }, [account]);
+
+  useEffect(() => {
+    void load();
+    const id = window.setInterval(() => void load(), 8000);
+    return () => window.clearInterval(id);
+  }, [load]);
+
+  async function cancel(o: OpenOrder) {
+    if (!account) return;
+    setCancelling(o.id);
+    try {
+      await cancelBrinkOrder(account, o.id, o.symbol);
+      inbox.push("Order cancelled", tidy(o.symbol));
+      await load();
+    } catch {
+      /* surfaced on the Wallet panel */
+    } finally {
+      setCancelling(null);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.015]">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
+        <span className="text-[12px] font-semibold text-bone-white">
+          Open orders <span className="ml-1 text-[10px] text-muted-sage/40">{orders.length}</span>
+        </span>
+        <button type="button" onClick={() => void load()} className="rounded-md p-1.5 text-muted-sage/50 hover:bg-white/[0.05] hover:text-bone-white" aria-label="Refresh">
+          <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+        </button>
+      </div>
+
+      {orders.length === 0 ? (
+        <p className="px-3 py-3 text-[12px] text-muted-sage/50">{loading ? "Loading…" : "No open orders."}</p>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto p-2.5">
+          {orders.map((o) => (
+            <div key={o.id} className="flex shrink-0 items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2">
+              <SideTag side={o.side} />
+              <span className="text-[12px] text-bone-white">{tidy(o.symbol)}</span>
+              <span className="text-[12px] tabular-nums text-muted-sage/70">
+                {o.price === undefined ? "—" : Math.round(o.price * 100) + "¢"} · {o.filled}/{o.amount}
+              </span>
+              <button
+                type="button"
+                onClick={() => void cancel(o)}
+                disabled={cancelling === o.id}
+                className="rounded-md p-1 text-muted-sage/50 hover:bg-white/[0.06] hover:text-[#e08a8a] disabled:opacity-50"
+                aria-label="Cancel order"
+              >
+                {cancelling === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
