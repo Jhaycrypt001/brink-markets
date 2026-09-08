@@ -1,11 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
+import { useActiveAccount } from "thirdweb/react";
 import type { ScoredMarket } from "@/lib/markets";
 import { formatDuration, formatCompact } from "@/lib/markets";
 import { PriceChart } from "./price-chart";
 import { OrderBook } from "./order-book";
 import { TradeTicket } from "./trade-ticket";
-import { OpenOrdersStrip } from "./positions-panel";
+import { OpenOrdersStrip, useOpenOrders } from "./positions-panel";
 import type { PricePoint } from "./use-market-feed";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,13 @@ export function TradeView({
   elapsed: number;
   history: PricePoint[];
 }) {
+  const account = useActiveAccount();
+  const openOrders = useOpenOrders(account);
+  const marketOrders = useMemo(
+    () => openOrders.orders.filter((o) => o.symbol === selected.symbol),
+    [openOrders.orders, selected.symbol]
+  );
+
   return (
     <div className="space-y-4">
       <MarketHeader market={selected} elapsed={elapsed} />
@@ -34,7 +42,7 @@ export function TradeView({
         </div>
         <div className="grid gap-4">
           <div className={cn(PANEL, "overflow-hidden")}>
-            <OrderBook market={selected} />
+            <OrderBook market={selected} myOrders={marketOrders} />
           </div>
           <div className={cn(PANEL, "overflow-hidden")}>
             <TradeTicket market={selected} />
@@ -42,7 +50,7 @@ export function TradeView({
         </div>
       </div>
 
-      <OpenOrdersStrip />
+      <OpenOrdersStrip {...openOrders} />
 
       <MarketsTable markets={markets} selected={selected} onSelect={onSelect} elapsed={elapsed} />
     </div>

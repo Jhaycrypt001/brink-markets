@@ -1,15 +1,17 @@
 import { useMemo } from "react";
 import type { ScoredMarket } from "@/lib/markets";
 import { formatCompact } from "@/lib/markets";
+import type { OpenOrder } from "@/lib/trade";
 
 type Level = { price: number; size: number };
 
 /**
  * OrderBook — the real bid/ask ladder from the API's order book (cents). Asks on
- * top down to the spread, bids below, with depth bars. Shows an empty state when
- * the market has no live book.
+ * top down to the spread, bids below, with depth bars. Rows where the connected
+ * wallet has a resting order (matched by price + side) carry a green "you" marker
+ * with the resting size. Shows an empty state when the market has no live book.
  */
-export function OrderBook({ market }: { market: ScoredMarket }) {
+export function OrderBook({ market, myOrders = [] }: { market: ScoredMarket; myOrders?: OpenOrder[] }) {
   const { asks, bids } = useMemo(() => {
     const book = market.orderBook;
     if (!book) return { asks: [] as Level[], bids: [] as Level[] };
@@ -17,6 +19,20 @@ export function OrderBook({ market }: { market: ScoredMarket }) {
       rows.slice(0, 9).map(([price, size]) => ({ price: Math.round(price * 100), size }));
     return { asks: toLevels(book.asks).reverse(), bids: toLevels(book.bids) };
   }, [market]);
+
+  // Resting-order sizes keyed by price (cents): buy orders sit on the bid side,
+  // sell orders on the ask side.
+  const mine = useMemo(() => {
+    const buy = new Map<number, number>();
+    const sell = new Map<number, number>();
+    for (const o of myOrders) {
+      if (o.price === undefined) continue;
+      const cents = Math.round(o.price * 100);
+      const map = o.side === "buy" ? buy : sell;
+      map.set(cents, (map.get(cents) ?? 0) + o.remaining);
+    }
+    return { buy, sell };
+  }, [myOrders]);
 
   const maxSize = useMemo(
     () => Math.max(1, ...asks.map((l) => l.size), ...bids.map((l) => l.size)),
@@ -44,7 +60,7 @@ export function OrderBook({ market }: { market: ScoredMarket }) {
           </div>
           <div className="flex-1 overflow-hidden">
             {asks.map((level, i) => (
-              <BookRow key={"a" + i} level={level} maxSize={maxSize} side="ask" />
+              <BookRow key={"a" + i} level={level} maxSize={maxSize} side="ask" mine={mine.sell.get(level.price)} />
             ))}
             <div className="flex items-center justify-between border-y border-white/[0.06] bg-white/[0.02] px-3 py-1.5">
               <span className="text-[13px] font-bold tabular-nums text-bone-white">
@@ -53,7 +69,7 @@ export function OrderBook({ market }: { market: ScoredMarket }) {
               <span className="text-[10px] uppercase tracking-wider text-muted-sage/50">Spread {spread}¢</span>
             </div>
             {bids.map((level, i) => (
-              <BookRow key={"b" + i} level={level} maxSize={maxSize} side="bid" />
+              <BookRow key={"b" + i} level={level} maxSize={maxSize} side="bid" mine={mine.buy.get(level.price)} />
             ))}
           </div>
         </>
@@ -62,7 +78,7 @@ export function OrderBook({ market }: { market: ScoredMarket }) {
   );
 }
 
-function BookRow({ level, maxSize, side }: { level: Level; maxSize: number; side: "ask" | "bid" }) {
+function BookRow({ level, maxSize, side, mine }: { level: Level; maxSize: number; side: "ask" | "bid"; mine?: number }) {
   const pct = Math.min(100, (level.size / maxSize) * 100);
   const isBid = side === "bid";
   return (
@@ -72,7 +88,23 @@ function BookRow({ level, maxSize, side }: { level: Level; maxSize: number; side
         style={{ width: pct + "%" }}
         aria-hidden="true"
       />
-      <span className={"relative " + (isBid ? "text-highlighter-green" : "text-[#e08a8a]")}>{level.price}¢</span>
+      {mine !== undefined && (
+        <span
+          className="absolute inset-y-0 left-0 w-[3px] bg-highlighter-green"
+          aria-hidden="true"
+        />
+      )}
+      <span className={"relative flex items-center gap-1.5 " + (isBid ? "text-highlighter-green" : "text-[#e08a8a]")}>
+        {level.price}¢
+        {mine !== undefined && (
+          <span
+            className="rounded-sm bg-highlighter-green/20 px-1 text-[9px] font-bold uppercase tracking-wide text-highlighter-green"
+            title={`Your resting order · ${formatCompact(mine)}`}
+          >
+            You {formatCompact(mine)}
+          </span>
+        )}
+      </span>
       <span className="relative text-muted-sage/70">{formatCompact(level.size)}</span>
     </div>
   );

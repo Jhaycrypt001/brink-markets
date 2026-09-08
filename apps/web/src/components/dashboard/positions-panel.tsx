@@ -158,19 +158,22 @@ export function PositionsPanel() {
 }
 
 /**
- * OpenOrdersStrip — a compact, in-context row of the wallet's resting orders for
- * the Trade view. Shows a slim "no open orders" line when empty; each order is a
- * chip with a wallet-signed cancel. Polls every 8s.
+ * useOpenOrders — one shared poll of the wallet's resting orders (8s), with a
+ * wallet-signed cancel. The Trade view mounts it once and feeds both the strip
+ * and the order-book markers, so the ladder and the strip never disagree.
  */
-export function OpenOrdersStrip() {
-  const account = useActiveAccount();
+export function useOpenOrders(account: ReturnType<typeof useActiveAccount>) {
   const inbox = useNotifications();
   const [orders, setOrders] = useState<OpenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!account) return;
+    if (!account) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
     try {
       setOrders(await fetchOpenOrders(account));
     } catch {
@@ -186,27 +189,40 @@ export function OpenOrdersStrip() {
     return () => window.clearInterval(id);
   }, [load]);
 
-  async function cancel(o: OpenOrder) {
-    if (!account) return;
-    setCancelling(o.id);
-    try {
-      await cancelBrinkOrder(account, o.id, o.symbol);
-      inbox.push("Order cancelled", tidy(o.symbol));
-      await load();
-    } catch {
-      /* surfaced on the Wallet panel */
-    } finally {
-      setCancelling(null);
-    }
-  }
+  const cancel = useCallback(
+    async (o: OpenOrder) => {
+      if (!account) return;
+      setCancelling(o.id);
+      try {
+        await cancelBrinkOrder(account, o.id, o.symbol);
+        inbox.push("Order cancelled", tidy(o.symbol));
+        await load();
+      } catch {
+        /* surfaced on the Wallet panel */
+      } finally {
+        setCancelling(null);
+      }
+    },
+    [account, inbox, load]
+  );
 
+  return { orders, loading, refresh: load, cancel, cancelling };
+}
+
+type OpenOrdersControls = ReturnType<typeof useOpenOrders>;
+
+/**
+ * OpenOrdersStrip — a compact, in-context row of resting orders for the Trade
+ * view. Presentational: it's driven by a shared useOpenOrders() instance.
+ */
+export function OpenOrdersStrip({ orders, loading, refresh, cancel, cancelling }: OpenOrdersControls) {
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.015]">
       <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
         <span className="text-[12px] font-semibold text-bone-white">
           Open orders <span className="ml-1 text-[10px] text-muted-sage/40">{orders.length}</span>
         </span>
-        <button type="button" onClick={() => void load()} className="rounded-md p-1.5 text-muted-sage/50 hover:bg-white/[0.05] hover:text-bone-white" aria-label="Refresh">
+        <button type="button" onClick={() => void refresh()} className="rounded-md p-1.5 text-muted-sage/50 hover:bg-white/[0.05] hover:text-bone-white" aria-label="Refresh">
           <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
         </button>
       </div>
