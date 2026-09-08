@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Copy, Check, Shield, Bell, Sparkles } from "lucide-react";
+import { PremiumToggle } from "@/components/ui/bouncy-toggle";
+import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -40,12 +42,12 @@ export function SettingsView() {
 }
 
 function ProfileCard() {
+  const wallet = useWallet();
   const [copied, setCopied] = useState(false);
-  const address = "0x7f42a9c3e18b6d0045f9c2ab77e1d0093c2f83ad";
-  const short = "0x7f42…83ad";
 
   function copy() {
-    navigator.clipboard?.writeText(address).then(
+    if (!wallet.address) return;
+    navigator.clipboard?.writeText(wallet.address).then(
       () => {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1400);
@@ -61,14 +63,30 @@ function ProfileCard() {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[16px] font-semibold text-bone-white">Guest Trader</p>
-        <button onClick={copy} className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-muted-sage/60 hover:text-bone-white">
-          {short}
-          {copied ? <Check className="h-3.5 w-3.5 text-highlighter-green" /> : <Copy className="h-3.5 w-3.5" />}
-        </button>
+        {wallet.ready ? (
+          <button onClick={copy} className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-muted-sage/60 hover:text-bone-white">
+            {shortAddress(wallet.address ?? "")} · Somnia
+            {copied ? <Check className="h-3.5 w-3.5 text-highlighter-green" /> : <Copy className="h-3.5 w-3.5" />}
+          </button>
+        ) : (
+          <p className="mt-1 text-[12px] text-muted-sage/50">Not connected</p>
+        )}
       </div>
-      <button className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] font-semibold text-bone-white hover:bg-white/[0.06]">
-        Connect wallet
-      </button>
+      {wallet.ready ? (
+        <button
+          onClick={wallet.disconnect}
+          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] font-semibold text-muted-sage/80 hover:text-bone-white"
+        >
+          Disconnect
+        </button>
+      ) : (
+        <button
+          onClick={wallet.open}
+          className="rounded-lg bg-highlighter-green px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
+        >
+          Connect wallet
+        </button>
+      )}
     </div>
   );
 }
@@ -96,25 +114,21 @@ function Toggle({
   hint: string;
   defaultOn?: boolean;
 }) {
-  const [on, setOn] = useState(() => {
+  const initial = (() => {
     try {
       const v = localStorage.getItem(storageKey);
       return v === null ? defaultOn : v === "true";
     } catch {
       return defaultOn;
     }
-  });
+  })();
 
-  function toggle() {
-    setOn((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(storageKey, String(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
+  function persist(next: boolean) {
+    try {
+      localStorage.setItem(storageKey, String(next));
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
@@ -123,23 +137,7 @@ function Toggle({
         <p className="text-[13px] font-medium text-bone-white">{label}</p>
         <p className="mt-0.5 text-[12px] text-muted-sage/55">{hint}</p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        onClick={toggle}
-        className={cn(
-          "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-          on ? "bg-highlighter-green" : "bg-white/[0.1]"
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 h-5 w-5 rounded-full bg-bone-white shadow transition-transform",
-            on ? "translate-x-[22px]" : "translate-x-0.5"
-          )}
-        />
-      </button>
+      <PremiumToggle defaultChecked={initial} onChange={persist} />
     </div>
   );
 }

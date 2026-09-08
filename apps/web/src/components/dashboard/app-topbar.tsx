@@ -1,4 +1,5 @@
-import { Menu, Search, Bell, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { Menu, Search, Bell, Wifi, WifiOff, RefreshCw, Wallet } from "lucide-react";
+import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar({
@@ -13,6 +14,7 @@ export function AppTopbar({
   onRefresh: () => void;
 }) {
   const isLive = source === "live";
+  const wallet = useWallet();
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-white/[0.06] bg-press-black/90 px-3 backdrop-blur-md sm:px-5">
       <button
@@ -60,9 +62,30 @@ export function AppTopbar({
           <Bell className="h-4 w-4" />
           <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-highlighter-green" />
         </button>
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-highlighter-green to-[#12a52c] text-[12px] font-bold text-press-black">
-          JT
-        </span>
+
+        {wallet.ready ? (
+          <button
+            type="button"
+            onClick={wallet.open}
+            className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] py-1.5 pl-2.5 pr-1.5 hover:bg-white/[0.06]"
+          >
+            <span className="hidden text-[12px] font-semibold tabular-nums text-bone-white sm:inline">
+              {shortAddress(wallet.address ?? "")}
+            </span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-highlighter-green to-[#12a52c] text-[11px] font-bold text-press-black">
+              JT
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={wallet.open}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-highlighter-green px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-press-black transition hover:brightness-105"
+          >
+            <Wallet className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Connect wallet</span>
+          </button>
+        )}
       </div>
     </header>
   );

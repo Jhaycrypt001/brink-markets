@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Bot, Wallet, Users, Trophy, Radar, LayoutGrid } from "lucide-react";
+import { X } from "lucide-react";
 import { fetchMarkets, DEMO_MARKETS, type ScoredMarket } from "@/lib/markets";
 import { BrinkLoader } from "@/components/dashboard/brink-loader";
 import { AppSidebar, type DashView } from "@/components/dashboard/app-sidebar";
 import { AppTopbar } from "@/components/dashboard/app-topbar";
 import { TradeView } from "@/components/dashboard/trade-view";
 import { SettingsView } from "@/components/dashboard/settings-view";
+import { WalletProvider } from "@/components/dashboard/wallet";
+import { MarketsView } from "@/components/dashboard/views/markets-view";
+import { ScannerView } from "@/components/dashboard/views/scanner-view";
+import { LeaderboardView } from "@/components/dashboard/views/leaderboard-view";
+import { WalletView } from "@/components/dashboard/views/wallet-view";
+import { ReferralsView } from "@/components/dashboard/views/referrals-view";
+import { BrinkAiView } from "@/components/dashboard/views/brink-ai-view";
 import { cn } from "@/lib/utils";
 
 export function DashboardPage() {
@@ -56,77 +63,84 @@ export function DashboardPage() {
     }
   }, [collapsed]);
 
-  const ranked = useMemo(
-    () => [...markets].sort((a, b) => b.score - a.score),
-    [markets]
-  );
+  const ranked = useMemo(() => [...markets].sort((a, b) => b.score - a.score), [markets]);
   const selected = ranked.find((m) => m.marketId === selectedId) ?? ranked[0];
 
-  function pick(view: DashView) {
-    setView(view);
+  function pick(v: DashView) {
+    setView(v);
     setDrawer(false);
   }
 
+  function openMarket(m: ScoredMarket) {
+    setSelectedId(m.marketId);
+    setView("trade");
+    setDrawer(false);
+    window.scrollTo(0, 0);
+  }
+
   return (
-    <div className="min-h-screen bg-[#0c0f0d] text-bone-white">
-      {intro && <BrinkLoader onComplete={() => setIntro(false)} />}
+    <WalletProvider>
+      <div className="min-h-screen bg-[#0c0f0d] text-bone-white">
+        {intro && <BrinkLoader onComplete={() => setIntro(false)} />}
 
-      {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden border-r border-white/[0.06] lg:block",
-          collapsed ? "w-[68px]" : "w-[240px]"
-        )}
-      >
-        <AppSidebar view={view} onView={pick} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
-      </aside>
-
-      {/* Mobile drawer */}
-      <AnimatePresence>
-        {drawer && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDrawer(false)}
-            />
-            <motion.aside
-              className="fixed inset-y-0 left-0 z-50 w-[260px] border-r border-white/[0.06] lg:hidden"
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 300, damping: 32 }}
-            >
-              <button
-                type="button"
-                onClick={() => setDrawer(false)}
-                className="absolute right-3 top-4 z-10 rounded-md p-1.5 text-muted-sage/60 hover:text-bone-white"
-                aria-label="Close menu"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <AppSidebar view={view} onView={pick} collapsed={false} onToggleCollapse={() => {}} />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Main column */}
-      <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[68px]" : "lg:pl-[240px]")}>
-        <AppTopbar onOpenMenu={() => setDrawer(true)} source={source} loading={loading} onRefresh={() => void load()} />
-
-        <main className="mx-auto max-w-[1400px] px-3 py-4 sm:px-5 sm:py-6">
-          {view === "trade" && selected && !loading && (
-            <TradeView markets={ranked} selected={selected} onSelect={(m) => setSelectedId(m.marketId)} elapsed={elapsed} />
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-40 hidden border-r border-white/[0.06] lg:block",
+            collapsed ? "w-[68px]" : "w-[240px]"
           )}
-          {view === "trade" && loading && <TradeSkeleton />}
-          {view === "settings" && <SettingsView />}
-          {view !== "trade" && view !== "settings" && <ComingSoon view={view} />}
-        </main>
+        >
+          <AppSidebar view={view} onView={pick} collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
+        </aside>
+
+        <AnimatePresence>
+          {drawer && (
+            <>
+              <motion.div
+                className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDrawer(false)}
+              />
+              <motion.aside
+                className="fixed inset-y-0 left-0 z-50 w-[260px] border-r border-white/[0.06] lg:hidden"
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                transition={{ type: "spring", stiffness: 300, damping: 32 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setDrawer(false)}
+                  className="absolute right-3 top-4 z-10 rounded-md p-1.5 text-muted-sage/60 hover:text-bone-white"
+                  aria-label="Close menu"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <AppSidebar view={view} onView={pick} collapsed={false} onToggleCollapse={() => {}} />
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>
+
+        <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[68px]" : "lg:pl-[240px]")}>
+          <AppTopbar onOpenMenu={() => setDrawer(true)} source={source} loading={loading} onRefresh={() => void load()} />
+
+          <main className="mx-auto max-w-[1400px] px-3 py-4 sm:px-5 sm:py-6">
+            {view === "trade" && (loading || !selected ? <TradeSkeleton /> : (
+              <TradeView markets={ranked} selected={selected} onSelect={(m) => setSelectedId(m.marketId)} elapsed={elapsed} />
+            ))}
+            {view === "markets" && <MarketsView markets={ranked} elapsed={elapsed} onOpen={openMarket} />}
+            {view === "scanner" && <ScannerView markets={ranked} elapsed={elapsed} onOpen={openMarket} />}
+            {view === "leaderboard" && <LeaderboardView />}
+            {view === "wallet" && <WalletView />}
+            {view === "referrals" && <ReferralsView />}
+            {view === "intelligence" && <BrinkAiView />}
+            {view === "settings" && <SettingsView />}
+          </main>
+        </div>
       </div>
-    </div>
+    </WalletProvider>
   );
 }
 
@@ -139,34 +153,6 @@ function TradeSkeleton() {
         <div className="h-80 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.02]" />
       </div>
       <div className="h-64 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.02]" />
-    </div>
-  );
-}
-
-const COMING = {
-  markets: { icon: LayoutGrid, title: "Markets board", body: "A full grid of every ranked event contract lands here next." },
-  scanner: { icon: Radar, title: "Scanner", body: "Set score, spread, and expiry filters to surface markets the moment they qualify." },
-  leaderboard: { icon: Trophy, title: "Leaderboard", body: "Top discovery streaks and the sharpest scored calls, ranked." },
-  wallet: { icon: Wallet, title: "Wallet", body: "Connect a Shannon wallet to sign orders — discovery stays read-only until you do." },
-  referrals: { icon: Users, title: "Referrals", body: "Invite traders and track your referral rewards." },
-  intelligence: { icon: Bot, title: "Brink AI", body: "Natural-language market discovery and score explanations, live soon." }
-} as const;
-
-function ComingSoon({ view }: { view: Exclude<DashView, "trade" | "settings"> }) {
-  const meta = COMING[view];
-  const Icon = meta.icon;
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="max-w-md text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03]">
-          <Icon className="h-6 w-6 text-highlighter-green" />
-        </span>
-        <h2 className="mt-6 font-display text-[2rem] leading-none tracking-[-0.03em]">{meta.title}</h2>
-        <p className="mt-3 text-[14px] text-muted-sage/60">{meta.body}</p>
-        <span className="mt-5 inline-flex rounded-full border border-white/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-sage/50">
-          Coming soon
-        </span>
-      </div>
     </div>
   );
 }
