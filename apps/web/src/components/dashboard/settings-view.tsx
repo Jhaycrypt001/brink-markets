@@ -2,16 +2,24 @@ import { useState, type ReactNode } from "react";
 import { Copy, Check, Shield, Bell, Sparkles } from "lucide-react";
 import { PremiumToggle } from "@/components/ui/bouncy-toggle";
 import { useWallet, shortAddress } from "@/components/dashboard/wallet";
+import { usePrefs, type PrefKey } from "@/components/dashboard/prefs";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
 
 /**
- * SettingsView — profile card plus real, persisted preference toggles. Effects
- * are intentionally light (this is a read-only discovery surface), but every
- * control reflects and stores genuine state.
+ * SettingsView — profile card plus fully functional preferences. Every toggle
+ * drives real behavior via the preferences engine: density scales the terminal,
+ * reduce-motion halts animations, fill sounds play a tick, and notification
+ * toggles fire real browser notifications (requesting permission when enabled).
  */
 export function SettingsView() {
+  const prefs = usePrefs();
+  const notifBlocked =
+    (prefs.tradeableAlerts || prefs.expiryWarnings) &&
+    prefs.notifPermission !== "granted" &&
+    prefs.notifPermission !== "unsupported";
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
@@ -22,14 +30,19 @@ export function SettingsView() {
       <ProfileCard />
 
       <Section title="Preferences" icon={Sparkles}>
-        <Toggle storageKey="brink.pref.compact" label="Compact density" hint="Tighten spacing across the terminal." />
-        <Toggle storageKey="brink.pref.reduceMotion" label="Reduce motion" hint="Minimize animations and transitions." />
-        <Toggle storageKey="brink.pref.sound" label="Fill sounds" hint="Play a tick when a market turns tradeable." defaultOn={false} />
+        <Toggle prefKey="compactDensity" label="Compact density" hint="Scale the terminal down for a denser layout." />
+        <Toggle prefKey="reduceMotion" label="Reduce motion" hint="Halt animations and transitions across the app." />
+        <Toggle prefKey="fillSounds" label="Fill sounds" hint="Play a tick when a market turns tradeable." />
       </Section>
 
       <Section title="Notifications" icon={Bell}>
-        <Toggle storageKey="brink.notify.tradeable" label="Tradeable alerts" hint="Notify when a market clears every gate." />
-        <Toggle storageKey="brink.notify.expiry" label="Expiry warnings" hint="Warn when a held market nears expiry." />
+        {notifBlocked && (
+          <p className="px-5 pt-3 text-[12px] text-[#e0b06a]">
+            Browser notifications are blocked. Allow notifications for this site to receive alerts.
+          </p>
+        )}
+        <Toggle prefKey="tradeableAlerts" label="Tradeable alerts" hint="Notify when a market clears every gate." />
+        <Toggle prefKey="expiryWarnings" label="Expiry warnings" hint="Warn when a market is under a minute from expiry." />
       </Section>
 
       <Section title="Security" icon={Shield}>
@@ -58,11 +71,18 @@ function ProfileCard() {
 
   return (
     <div className={cn(PANEL, "flex flex-wrap items-center gap-4 p-5")}>
-      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-highlighter-green to-[#12a52c] text-[22px] font-bold text-press-black">
-        JT
+      <span
+        className={cn(
+          "flex h-16 w-16 items-center justify-center rounded-2xl text-[20px] font-bold",
+          wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.06] text-muted-sage/60"
+        )}
+      >
+        {wallet.address ? wallet.address.slice(2, 4).toUpperCase() : "—"}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[16px] font-semibold text-bone-white">Guest Trader</p>
+        <p className="text-[16px] font-semibold text-bone-white">
+          {wallet.ready ? "Somnia account" : "No wallet connected"}
+        </p>
         {wallet.ready ? (
           <button onClick={copy} className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-muted-sage/60 hover:text-bone-white">
             {shortAddress(wallet.address ?? "")} · Somnia
@@ -103,41 +123,15 @@ function Section({ title, icon: Icon, children }: { title: string; icon: typeof 
   );
 }
 
-function Toggle({
-  storageKey,
-  label,
-  hint,
-  defaultOn = true
-}: {
-  storageKey: string;
-  label: string;
-  hint: string;
-  defaultOn?: boolean;
-}) {
-  const initial = (() => {
-    try {
-      const v = localStorage.getItem(storageKey);
-      return v === null ? defaultOn : v === "true";
-    } catch {
-      return defaultOn;
-    }
-  })();
-
-  function persist(next: boolean) {
-    try {
-      localStorage.setItem(storageKey, String(next));
-    } catch {
-      /* ignore */
-    }
-  }
-
+function Toggle({ prefKey, label, hint }: { prefKey: PrefKey; label: string; hint: string }) {
+  const prefs = usePrefs();
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-3.5">
       <div>
         <p className="text-[13px] font-medium text-bone-white">{label}</p>
         <p className="mt-0.5 text-[12px] text-muted-sage/55">{hint}</p>
       </div>
-      <PremiumToggle defaultChecked={initial} onChange={persist} />
+      <PremiumToggle defaultChecked={prefs[prefKey]} onChange={(v) => prefs.set(prefKey, v)} />
     </div>
   );
 }

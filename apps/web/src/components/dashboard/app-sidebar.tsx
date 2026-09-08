@@ -15,6 +15,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { BrinkMark } from "@/components/ui/brink-mark";
+import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { cn } from "@/lib/utils";
 
 export type DashView =
@@ -229,17 +230,35 @@ function NavButton({
 }
 
 function ProfileChip({ collapsed }: { collapsed: boolean }) {
+  const wallet = useWallet();
+  const initials = wallet.address ? wallet.address.slice(2, 4).toUpperCase() : "—";
   return (
-    <div className={cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5", collapsed && "justify-center")}>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-highlighter-green to-[#12a52c] text-[12px] font-bold text-press-black">
-        JT
+    <button
+      type="button"
+      onClick={wallet.open}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-white/[0.03]",
+        collapsed && "justify-center"
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
+          wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.08] text-muted-sage/60"
+        )}
+      >
+        {initials}
       </span>
       {!collapsed && (
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-semibold text-bone-white">Guest Trader</p>
-          <p className="truncate text-[11px] text-muted-sage/50">0x7f…3ad · Shannon</p>
+          <p className="truncate text-[12px] font-semibold text-bone-white">
+            {wallet.ready ? shortAddress(wallet.address ?? "") : "Connect wallet"}
+          </p>
+          <p className="truncate text-[11px] text-muted-sage/50">
+            {wallet.ready ? "Somnia Shannon" : wallet.status === "connected" ? "Switch to Somnia" : "Not connected"}
+          </p>
         </div>
       )}
-    </div>
+    </button>
   );
 }

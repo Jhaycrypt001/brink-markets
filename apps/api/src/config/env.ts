@@ -7,7 +7,7 @@ const envSchema = z.object({
   MARKET_CACHE_TTL_MS: z.coerce.number().int().positive().default(3_000),
   MARKET_CACHE_STALE_MS: z.coerce.number().int().nonnegative().default(30_000),
   MARKET_MAX_RESULTS: z.coerce.number().int().positive().max(500).default(100),
-  CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  CORS_ORIGIN: z.string().default("http://localhost:5173,http://127.0.0.1:5173"),
   SOMNIA_INDEXER_URL: z.string().url().optional(),
   SOMNIA_WS_RPC_URL: z.string().url().optional()
 });

@@ -1,115 +1,93 @@
-import { useMemo, useState } from "react";
-import { Maximize2, Settings2 } from "lucide-react";
+import { useMemo } from "react";
+import { Activity } from "lucide-react";
 import type { ScoredMarket } from "@/lib/markets";
-import { genCandles } from "./synth";
-import { cn } from "@/lib/utils";
-
-const TIMEFRAMES = ["5m", "15m", "1h", "4h"] as const;
+import type { PricePoint } from "./use-market-feed";
 
 /**
- * PriceChart — a compact candlestick view of a binary market's YES price (in
- * cents). Candles are drawn as SVG rects on a non-distorting percentage grid;
- * axis labels and the live price pill are crisp HTML overlays.
+ * PriceChart — the live YES-price line for a market, drawn from real observed
+ * quotes accumulated by the feed. No synthetic history: until at least two ticks
+ * have arrived it shows a "building" state, then renders the real series with a
+ * pulsing live point and a price axis in cents.
  */
-export function PriceChart({ market }: { market: ScoredMarket }) {
-  const [tf, setTf] = useState<(typeof TIMEFRAMES)[number]>("1h");
-  const candles = useMemo(() => genCandles(market, tf), [market, tf]);
+export function PriceChart({ market, history }: { market: ScoredMarket; history: PricePoint[] }) {
+  const yesPrice = Math.round((market.bestAsk ?? 0.5) * 100);
 
-  const { lo, hi } = useMemo(() => {
-    const highs = candles.map((c) => c.h);
-    const lows = candles.map((c) => c.l);
-    const rawHi = Math.max(...highs);
-    const rawLo = Math.min(...lows);
-    const pad = (rawHi - rawLo) * 0.12 + 1;
-    return { hi: Math.min(100, rawHi + pad), lo: Math.max(0, rawLo - pad) };
-  }, [candles]);
-
-  const y = (price: number) => ((hi - price) / (hi - lo)) * 100;
-  const last = candles[candles.length - 1].c;
-  const slot = 100 / candles.length;
-  const bodyW = slot * 0.6;
-  const priceLabels = [hi, hi - (hi - lo) * 0.25, hi - (hi - lo) * 0.5, hi - (hi - lo) * 0.75, lo];
+  const view = useMemo(() => {
+    if (history.length < 2) return null;
+    const prices = history.map((h) => h.p);
+    const rawHi = Math.max(...prices);
+    const rawLo = Math.min(...prices);
+    const pad = Math.max(2, (rawHi - rawLo) * 0.25);
+    const hi = Math.min(100, rawHi + pad);
+    const lo = Math.max(0, rawLo - pad);
+    const span = Math.max(1, hi - lo);
+    const n = history.length;
+    const pts = history.map((h, i) => {
+      const x = (i / (n - 1)) * 100;
+      const y = ((hi - h.p) / span) * 100;
+      return { x, y };
+    });
+    const line = pts.map((p) => `${p.x},${p.y}`).join(" ");
+    const area = `0,100 ${line} 100,100`;
+    const last = pts[pts.length - 1];
+    const first = history[0].p;
+    const changePct = first === 0 ? 0 : Math.round(((history[n - 1].p - first) / first) * 1000) / 10;
+    return { line, area, last, hi, lo, changePct };
+  }, [history]);
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
-        <div className="flex items-center gap-1 rounded-lg bg-white/[0.03] p-0.5">
-          {TIMEFRAMES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTf(t)}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
-                tf === t ? "bg-white/[0.08] text-bone-white" : "text-muted-sage/60 hover:text-bone-white"
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          <button type="button" className="rounded-md p-1.5 text-muted-sage/50 hover:bg-white/[0.05] hover:text-bone-white" aria-label="Chart settings">
-            <Settings2 className="h-4 w-4" />
-          </button>
-          <button type="button" className="rounded-md p-1.5 text-muted-sage/50 hover:bg-white/[0.05] hover:text-bone-white" aria-label="Fullscreen">
-            <Maximize2 className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-highlighter-green/12 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-highlighter-green">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-highlighter-green opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-highlighter-green" />
+          </span>
+          Live
+        </span>
+        {view && (
+          <span className={"text-[12px] font-semibold tabular-nums " + (view.changePct >= 0 ? "text-highlighter-green" : "text-[#e08a8a]")}>
+            {view.changePct >= 0 ? "+" : ""}{view.changePct}% session
+          </span>
+        )}
       </div>
 
       <div className="relative min-h-[240px] flex-1 pr-12">
-        {/* grid */}
-        <div className="absolute inset-0 pr-12">
-          {[0, 25, 50, 75, 100].map((p) => (
-            <div key={p} className="absolute left-0 right-0 border-t border-white/[0.04]" style={{ top: p + "%" }} />
-          ))}
-        </div>
-
-        {/* candles */}
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full pr-12" style={{ paddingRight: 0 }}>
-          {candles.map((c, i) => {
-            const up = c.c >= c.o;
-            const cx = i * slot + slot / 2;
-            const bodyTop = y(Math.max(c.o, c.c));
-            const bodyH = Math.max(0.4, Math.abs(y(c.o) - y(c.c)));
-            const fill = up ? "var(--color-bone-white)" : "#3c463e";
-            return (
-              <g key={i}>
-                <rect x={cx - 0.18} y={y(c.h)} width={0.36} height={Math.max(0.3, y(c.l) - y(c.h))} fill={fill} opacity={0.7} />
-                <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} fill={fill} />
-              </g>
-            );
-          })}
-          {/* current price line */}
-          <rect x={0} y={y(last)} width={100} height={0.28} fill="var(--color-highlighter-green)" opacity={0.9} />
-        </svg>
-
-        {/* price axis */}
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-12">
-          {priceLabels.map((p, i) => (
-            <span
-              key={i}
-              className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-muted-sage/45"
-              style={{ top: y(p) + "%" }}
-            >
-              {Math.round(p)}¢
-            </span>
-          ))}
-          <span
-            className="absolute right-1 -translate-y-1/2 rounded bg-highlighter-green px-1 py-0.5 text-[10px] font-bold tabular-nums text-press-black"
-            style={{ top: y(last) + "%" }}
-          >
-            {Math.round(last)}¢
-          </span>
-        </div>
-      </div>
-
-      {/* time axis */}
-      <div className="flex justify-between border-t border-white/[0.06] px-3 py-1.5 text-[10px] tabular-nums text-muted-sage/40">
-        {["06:00", "09:00", "12:00", "15:00", "18:00", "now"].map((t) => (
-          <span key={t}>{t}</span>
-        ))}
+        {!view ? (
+          <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 text-center">
+            <Activity className="h-6 w-6 text-muted-sage/40" />
+            <p className="text-[13px] text-muted-sage/55">Building the live chart from the feed…</p>
+            <p className="text-[11px] text-muted-sage/35">Quotes plot here as they stream in.</p>
+          </div>
+        ) : (
+          <>
+            <div className="absolute inset-0 pr-12">
+              {[0, 25, 50, 75, 100].map((p) => (
+                <div key={p} className="absolute left-0 right-0 border-t border-white/[0.04]" style={{ top: p + "%" }} />
+              ))}
+            </div>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full pr-12">
+              <defs>
+                <linearGradient id="pc-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-highlighter-green)" stopOpacity="0.28" />
+                  <stop offset="100%" stopColor="var(--color-highlighter-green)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon points={view.area} fill="url(#pc-fill)" />
+              <polyline points={view.line} fill="none" stroke="var(--color-highlighter-green)" strokeWidth="0.7" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-12">
+              {[view.hi, (view.hi + view.lo) / 2, view.lo].map((p, i) => (
+                <span key={i} className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-muted-sage/45" style={{ top: (i === 0 ? 2 : i === 1 ? 50 : 98) + "%" }}>
+                  {Math.round(p)}¢
+                </span>
+              ))}
+              <span className="absolute right-1 -translate-y-1/2 rounded bg-highlighter-green px-1 py-0.5 text-[10px] font-bold tabular-nums text-press-black" style={{ top: view.last.y + "%" }}>
+                {yesPrice}¢
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

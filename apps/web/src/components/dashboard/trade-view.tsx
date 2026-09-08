@@ -1,10 +1,10 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, TrendingUp, TrendingDown } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import type { ScoredMarket } from "@/lib/markets";
 import { formatDuration, formatCompact } from "@/lib/markets";
-import { genStats } from "./synth";
 import { PriceChart } from "./price-chart";
 import { OrderBook } from "./order-book";
+import type { PricePoint } from "./use-market-feed";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -13,12 +13,14 @@ export function TradeView({
   markets,
   selected,
   onSelect,
-  elapsed
+  elapsed,
+  history
 }: {
   markets: ScoredMarket[];
   selected: ScoredMarket;
   onSelect: (market: ScoredMarket) => void;
   elapsed: number;
+  history: PricePoint[];
 }) {
   return (
     <div className="space-y-4">
@@ -26,7 +28,7 @@ export function TradeView({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className={cn(PANEL, "min-h-[320px] overflow-hidden")}>
-          <PriceChart market={selected} />
+          <PriceChart market={selected} history={history} />
         </div>
         <div className={cn(PANEL, "overflow-hidden")}>
           <OrderBook market={selected} />
@@ -39,9 +41,7 @@ export function TradeView({
 }
 
 function MarketHeader({ market, elapsed }: { market: ScoredMarket; elapsed: number }) {
-  const stats = useMemo(() => genStats(market), [market]);
   const yes = Math.round((market.bestAsk ?? 0.5) * 100);
-  const up = stats.changePct >= 0;
   const secondsLeft = Math.max(0, market.secondsLeft - elapsed);
 
   return (
@@ -61,17 +61,14 @@ function MarketHeader({ market, elapsed }: { market: ScoredMarket; elapsed: numb
         <span className="font-display text-[1.75rem] leading-none tracking-[-0.03em] text-bone-white tabular-nums">
           {yes}¢
         </span>
-        <span className={cn("flex items-center gap-0.5 text-[12px] font-semibold tabular-nums", up ? "text-highlighter-green" : "text-[#e08a8a]")}>
-          {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-          {up ? "+" : ""}{stats.changePct}%
-        </span>
+        <span className="text-[11px] uppercase tracking-wider text-muted-sage/45">YES</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <Stat label="24H High" value={stats.high + "¢"} tone="up" />
-        <Stat label="24H Low" value={stats.low + "¢"} tone="down" />
+        <Stat label="Best bid" value={market.bestBid ? Math.round(market.bestBid * 100) + "¢" : "—"} tone="accent" />
+        <Stat label="Best ask" value={market.bestAsk ? Math.round(market.bestAsk * 100) + "¢" : "—"} />
+        <Stat label="Spread" value={market.spread === undefined ? "—" : Math.round(market.spread * 100) + " pts"} />
         <Stat label="Volume" value={"$" + formatCompact(market.volume)} />
-        <Stat label="Open Interest" value={"$" + formatCompact(stats.openInterest)} />
         <Stat label="Brink Score" value={market.score.toFixed(1)} tone="accent" />
         <Stat label="Expiry" value={formatDuration(secondsLeft)} />
       </div>
@@ -79,9 +76,8 @@ function MarketHeader({ market, elapsed }: { market: ScoredMarket; elapsed: numb
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" | "accent" }) {
-  const color =
-    tone === "up" ? "text-highlighter-green" : tone === "down" ? "text-[#e08a8a]" : tone === "accent" ? "text-highlighter-green" : "text-bone-white";
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "accent" }) {
+  const color = tone === "accent" ? "text-highlighter-green" : "text-bone-white";
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-muted-sage/45">{label}</p>

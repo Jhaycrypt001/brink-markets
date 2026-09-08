@@ -9,11 +9,12 @@ export function AppTopbar({
   onRefresh
 }: {
   onOpenMenu: () => void;
-  source: "live" | "demo";
+  source: "live" | "empty" | "offline";
   loading: boolean;
   onRefresh: () => void;
 }) {
   const isLive = source === "live";
+  const label = source === "live" ? "Live" : source === "empty" ? "No feed" : "Offline";
   const wallet = useWallet();
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-white/[0.06] bg-press-black/90 px-3 backdrop-blur-md sm:px-5">
@@ -43,7 +44,7 @@ export function AppTopbar({
           )}
         >
           {isLive ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-          {isLive ? "Live" : "Demo"}
+          {label}
         </span>
 
         <button
@@ -73,7 +74,7 @@ export function AppTopbar({
               {shortAddress(wallet.address ?? "")}
             </span>
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-highlighter-green to-[#12a52c] text-[11px] font-bold text-press-black">
-              JT
+              {wallet.address ? wallet.address.slice(2, 4).toUpperCase() : "··"}
             </span>
           </button>
         ) : (

@@ -17,7 +17,10 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
   const app = Fastify({ logger: true });
   const cache = new TtlCache<BinaryMarket[]>(cacheTtlMs, staleCacheMs);
 
-  await app.register(cors, { origin: corsOrigin });
+  // CORS_ORIGIN may be a comma-separated list so both localhost and 127.0.0.1
+  // (the two hosts Vite serves on) are accepted without extra config.
+  const origins = corsOrigin.split(",").map((value) => value.trim()).filter(Boolean);
+  await app.register(cors, { origin: origins.length > 1 ? origins : origins[0] ?? corsOrigin });
 
   app.get("/health", async (request, reply) => {
     reply.header("x-request-id", request.id);

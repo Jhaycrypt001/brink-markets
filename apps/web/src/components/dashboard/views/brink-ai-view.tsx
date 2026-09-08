@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bot, ArrowUp, Sparkles } from "lucide-react";
+import type { ScoredMarket } from "@/lib/markets";
+import { formatDuration } from "@/lib/markets";
 import { PANEL } from "./_shared";
 import { cn } from "@/lib/utils";
 
@@ -7,29 +9,47 @@ type Msg = { role: "user" | "ai"; text: string };
 
 const SUGGESTIONS = [
   "Which markets clear every gate right now?",
-  "Explain the score on the top BTC market",
+  "Explain the top market's score",
   "Anything expiring in under 10 minutes?",
-  "Compare ETH and SOL spreads"
+  "Which markets have the tightest spread?"
 ];
 
 const SEED: Msg[] = [
-  { role: "ai", text: "I'm Brink AI. Ask me to surface markets, explain a score, or watch for a setup — I read the same live feed the terminal does." }
+  { role: "ai", text: "I'm Brink AI. Ask me to surface markets, explain a score, or spot a setup — I answer from the live feed the terminal reads." }
 ];
 
-function canned(prompt: string): string {
+/** Rule-based answers computed over the REAL live feed (no fabricated data). */
+function answer(prompt: string, markets: ScoredMarket[]): string {
+  if (markets.length === 0)
+    return "There are no live markets on the feed right now, so there's nothing to rank. New DreamDEX markets show up here the moment they go live.";
+
+  const ranked = [...markets].sort((a, b) => b.score - a.score);
+  const cents = (v?: number) => (v === undefined ? "—" : Math.round(v * 100) + "¢");
   const p = prompt.toLowerCase();
-  if (p.includes("gate") || p.includes("tradeable"))
-    return "4 markets clear every gate: BTC ≥ $72k (92.4), ETH ≥ $3,850 (88.1), SOL ≥ $185 (81.7), and BTC ≤ $70.5k (74.3). All are Trading on-chain with fresh two-sided books.";
-  if (p.includes("score"))
-    return "The top BTC market scores 92.4: +35 on-chain Trading, +20 expiry headroom (41m left), +15 fresh book (<15s), a tight 2pt spread, plus volume and trade-count weight. Nothing overrides an on-chain gate.";
-  if (p.includes("expir"))
-    return "Two markets expire under 10 minutes: SOL ≥ $190 (4m, score 58.2) and BTC ≥ $73.5k (3m, 41.5). Both are inside the expiry gate, so they read as diagnostic — not tradeable.";
-  if (p.includes("spread") || p.includes("compare"))
-    return "ETH is tighter: 3pt spread at 47¢ ask vs SOL's 4pt at 66¢. ETH also scores higher (88.1 vs 81.7) on fresher liquidity.";
-  return "On the live feed I'd rank by score, then filter on your gates. Wire the API and I'll answer against real-time books.";
+
+  if (p.includes("gate") || p.includes("tradeable")) {
+    const t = ranked.filter((m) => m.tradeable);
+    if (t.length === 0) return "Nothing clears every gate right now — no market is Trading on-chain with a fresh two-sided book.";
+    return `${t.length} market${t.length === 1 ? "" : "s"} clear every gate: ` + t.slice(0, 5).map((m) => `${m.asset} “${m.question}” (${m.score.toFixed(1)})`).join("; ") + ".";
+  }
+  if (p.includes("score") || p.includes("explain")) {
+    const m = ranked[0];
+    return `Top market: ${m.asset} “${m.question}” at ${m.score.toFixed(1)}. Ask ${cents(m.bestAsk)}, spread ${m.spread === undefined ? "—" : Math.round(m.spread * 100) + " pts"}, ${formatDuration(Math.max(0, m.secondsLeft))} to expiry. Reasons: ${m.reasons.join("; ") || "—"}.`;
+  }
+  if (p.includes("expir")) {
+    const soon = ranked.filter((m) => m.secondsLeft > 0 && m.secondsLeft <= 600).sort((a, b) => a.secondsLeft - b.secondsLeft);
+    if (soon.length === 0) return "Nothing expires within 10 minutes on the current feed.";
+    return "Expiring under 10 minutes: " + soon.map((m) => `${m.asset} (${formatDuration(m.secondsLeft)}, ${m.score.toFixed(1)})`).join("; ") + ".";
+  }
+  if (p.includes("spread") || p.includes("tight")) {
+    const withSpread = ranked.filter((m) => m.spread !== undefined).sort((a, b) => (a.spread! - b.spread!));
+    if (withSpread.length === 0) return "No market currently has a two-sided quote to measure a spread.";
+    return "Tightest spreads: " + withSpread.slice(0, 4).map((m) => `${m.asset} ${Math.round(m.spread! * 100)} pts (${cents(m.bestAsk)})`).join("; ") + ".";
+  }
+  return `I'm tracking ${markets.length} live market${markets.length === 1 ? "" : "s"}. Top-ranked: ${ranked[0].asset} “${ranked[0].question}” at ${ranked[0].score.toFixed(1)}. Ask about gates, scores, expiry, or spreads.`;
 }
 
-export function BrinkAiView() {
+export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
   const [messages, setMessages] = useState<Msg[]>(SEED);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -46,9 +66,9 @@ export function BrinkAiView() {
     setInput("");
     setThinking(true);
     window.setTimeout(() => {
-      setMessages((m) => [...m, { role: "ai", text: canned(q) }]);
+      setMessages((m) => [...m, { role: "ai", text: answer(q, markets) }]);
       setThinking(false);
-    }, 700);
+    }, 500);
   }
 
   return (
