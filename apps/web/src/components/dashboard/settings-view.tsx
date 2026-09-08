@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
-import { Copy, Check, Shield, Bell, Sparkles } from "lucide-react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { Copy, Check, Shield, Bell, Sparkles, Camera, X } from "lucide-react";
 import { PremiumToggle } from "@/components/ui/bouncy-toggle";
 import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { usePrefs, type PrefKey } from "@/components/dashboard/prefs";
+import { useProfile, ProfileAvatar, fileToAvatar } from "@/components/dashboard/profile";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -56,57 +57,123 @@ export function SettingsView() {
 
 function ProfileCard() {
   const wallet = useWallet();
+  const { displayName, avatar, setDisplayName, setAvatar } = useProfile();
   const [copied, setCopied] = useState(false);
+  const [name, setName] = useState(displayName);
+  const [saved, setSaved] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const initials = wallet.address ? wallet.address.slice(2, 4).toUpperCase() : "—";
 
   function copy() {
     if (!wallet.address) return;
-    navigator.clipboard?.writeText(wallet.address).then(
-      () => {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1400);
-      },
-      () => undefined
-    );
+    navigator.clipboard?.writeText(wallet.address).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    }, () => undefined);
+  }
+
+  function saveName() {
+    setDisplayName(name.trim());
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1400);
+  }
+
+  async function onFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return setUploadError("Choose an image file.");
+    if (file.size > 5 * 1024 * 1024) return setUploadError("Image must be under 5 MB.");
+    setUploadError(null);
+    try {
+      setAvatar(await fileToAvatar(file));
+    } catch {
+      setUploadError("Could not read that image.");
+    }
   }
 
   return (
-    <div className={cn(PANEL, "flex flex-wrap items-center gap-4 p-5")}>
-      <span
-        className={cn(
-          "flex h-16 w-16 items-center justify-center rounded-2xl text-[20px] font-bold",
-          wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.06] text-muted-sage/60"
-        )}
-      >
-        {wallet.address ? wallet.address.slice(2, 4).toUpperCase() : "—"}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[16px] font-semibold text-bone-white">
-          {wallet.ready ? "Somnia account" : "No wallet connected"}
-        </p>
+    <div className={cn(PANEL, "p-5")}>
+      <div className="flex flex-wrap items-center gap-5">
+        <div className="relative">
+          <ProfileAvatar
+            fallback={initials}
+            className={cn(
+              "h-20 w-20 rounded-2xl text-[24px] font-bold",
+              wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.06] text-muted-sage/60"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="absolute -bottom-1.5 -right-1.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#0c0f0d] bg-highlighter-green text-press-black hover:brightness-105"
+            aria-label="Upload profile picture"
+          >
+            <Camera className="h-4 w-4" />
+          </button>
+          {avatar && (
+            <button
+              type="button"
+              onClick={() => setAvatar(null)}
+              className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0c0f0d] bg-white/[0.15] text-bone-white hover:bg-white/[0.25]"
+              aria-label="Remove profile picture"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
+        </div>
+
+        <div className="min-w-[220px] flex-1">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-sage/45">Display name</label>
+          <div className="mt-1.5 flex items-center gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveName()}
+              maxLength={40}
+              placeholder={wallet.ready ? shortAddress(wallet.address ?? "") : "Your name"}
+              className="h-10 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-[14px] text-bone-white placeholder:text-muted-sage/40 focus:border-white/[0.16] focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={saveName}
+              disabled={name.trim() === displayName}
+              className="rounded-lg bg-highlighter-green px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-press-black transition hover:brightness-105 disabled:opacity-40"
+            >
+              {saved ? "Saved" : "Save"}
+            </button>
+          </div>
+          {uploadError && <p className="mt-1.5 text-[12px] text-[#e08a8a]">{uploadError}</p>}
+          <div className="mt-2 flex items-center gap-3 text-[12px] text-muted-sage/55">
+            {wallet.ready ? (
+              <button onClick={copy} className="inline-flex items-center gap-1.5 hover:text-bone-white">
+                {shortAddress(wallet.address ?? "")} · Somnia
+                {copied ? <Check className="h-3.5 w-3.5 text-highlighter-green" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            ) : (
+              <span>Not connected</span>
+            )}
+          </div>
+        </div>
+
         {wallet.ready ? (
-          <button onClick={copy} className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-muted-sage/60 hover:text-bone-white">
-            {shortAddress(wallet.address ?? "")} · Somnia
-            {copied ? <Check className="h-3.5 w-3.5 text-highlighter-green" /> : <Copy className="h-3.5 w-3.5" />}
+          <button
+            onClick={wallet.disconnect}
+            className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] font-semibold text-muted-sage/80 hover:text-bone-white"
+          >
+            Disconnect
           </button>
         ) : (
-          <p className="mt-1 text-[12px] text-muted-sage/50">Not connected</p>
+          <button
+            onClick={wallet.open}
+            className="rounded-lg bg-highlighter-green px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
+          >
+            Connect wallet
+          </button>
         )}
       </div>
-      {wallet.ready ? (
-        <button
-          onClick={wallet.disconnect}
-          className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[12px] font-semibold text-muted-sage/80 hover:text-bone-white"
-        >
-          Disconnect
-        </button>
-      ) : (
-        <button
-          onClick={wallet.open}
-          className="rounded-lg bg-highlighter-green px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
-        >
-          Connect wallet
-        </button>
-      )}
     </div>
   );
 }

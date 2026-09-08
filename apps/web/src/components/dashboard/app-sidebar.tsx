@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { BrinkMark } from "@/components/ui/brink-mark";
 import { useWallet, shortAddress } from "@/components/dashboard/wallet";
+import { useProfile, ProfileAvatar } from "@/components/dashboard/profile";
 import { cn } from "@/lib/utils";
 
 export type DashView =
@@ -231,6 +232,7 @@ function NavButton({
 
 function ProfileChip({ collapsed }: { collapsed: boolean }) {
   const wallet = useWallet();
+  const { displayName } = useProfile();
   const initials = wallet.address ? wallet.address.slice(2, 4).toUpperCase() : "—";
   return (
     <button
@@ -241,18 +243,17 @@ function ProfileChip({ collapsed }: { collapsed: boolean }) {
         collapsed && "justify-center"
       )}
     >
-      <span
+      <ProfileAvatar
+        fallback={initials}
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
+          "h-8 w-8 shrink-0 rounded-full text-[12px] font-bold",
           wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.08] text-muted-sage/60"
         )}
-      >
-        {initials}
-      </span>
+      />
       {!collapsed && (
         <div className="min-w-0 flex-1">
           <p className="truncate text-[12px] font-semibold text-bone-white">
-            {wallet.ready ? shortAddress(wallet.address ?? "") : "Connect wallet"}
+            {wallet.ready ? displayName || shortAddress(wallet.address ?? "") : "Connect wallet"}
           </p>
           <p className="truncate text-[11px] text-muted-sage/50">
             {wallet.ready ? "Somnia Shannon" : wallet.status === "connected" ? "Switch to Somnia" : "Not connected"}

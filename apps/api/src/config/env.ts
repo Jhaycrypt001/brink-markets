@@ -8,8 +8,10 @@ const envSchema = z.object({
   MARKET_CACHE_STALE_MS: z.coerce.number().int().nonnegative().default(30_000),
   MARKET_MAX_RESULTS: z.coerce.number().int().positive().max(500).default(100),
   CORS_ORIGIN: z.string().default("http://localhost:5173,http://127.0.0.1:5173"),
-  SOMNIA_INDEXER_URL: z.string().url().optional(),
-  SOMNIA_WS_RPC_URL: z.string().url().optional()
+  // Default to the public Somnia Shannon testnet endpoints so the API serves
+  // real DreamDEX markets out of the box. Override for a private indexer/RPC.
+  SOMNIA_INDEXER_URL: z.string().url().default("https://dev.smk.somnia.host/v1/graphql"),
+  SOMNIA_WS_RPC_URL: z.string().url().default("wss://api.infra.testnet.somnia.network/ws")
 });
 
 export type Env = z.infer<typeof envSchema>;

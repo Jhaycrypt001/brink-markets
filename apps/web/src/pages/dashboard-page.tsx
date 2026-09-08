@@ -9,6 +9,8 @@ import { TradeView } from "@/components/dashboard/trade-view";
 import { SettingsView } from "@/components/dashboard/settings-view";
 import { WalletProvider } from "@/components/dashboard/wallet";
 import { PreferencesProvider, usePrefs } from "@/components/dashboard/prefs";
+import { NotificationsProvider } from "@/components/dashboard/notifications";
+import { ProfileProvider } from "@/components/dashboard/profile";
 import { useMarketFeed } from "@/components/dashboard/use-market-feed";
 import { RequireWallet } from "@/components/dashboard/require-wallet";
 import { MarketsView } from "@/components/dashboard/views/markets-view";
@@ -23,7 +25,11 @@ export function DashboardPage() {
   return (
     <PreferencesProvider>
       <WalletProvider>
-        <DashboardInner />
+        <NotificationsProvider>
+          <ProfileProvider>
+            <DashboardInner />
+          </ProfileProvider>
+        </NotificationsProvider>
       </WalletProvider>
     </PreferencesProvider>
   );
