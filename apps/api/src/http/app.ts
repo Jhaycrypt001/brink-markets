@@ -5,6 +5,7 @@ import { scoreMarkets } from "../domain/scoring.js";
 import type { BinaryMarket } from "../domain/market.js";
 import { TtlCache } from "../lib/ttl-cache.js";
 import { ReferralStore } from "../domain/referrals.js";
+import { askBrinkAI, aiConfigured, AiNotConfiguredError, type AiTurn } from "../domain/brink-ai.js";
 import { z } from "zod";
 
 const marketQuerySchema = z.object({
@@ -28,6 +29,14 @@ const ethAddress = z.string().trim().regex(/^0x[a-fA-F0-9]{40}$/, "address");
 const referralClaimSchema = z.object({
   address: ethAddress,
   code: z.string().trim().min(4).max(16)
+});
+
+const aiAskSchema = z.object({
+  question: z.string().trim().min(1).max(2000),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) }))
+    .max(20)
+    .optional()
 });
 
 export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOrigin: string, staleCacheMs = 30_000, maxResults = 100): Promise<FastifyInstance> {
@@ -112,6 +121,31 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
       if (error instanceof z.ZodError) return reply.code(400).send({ error: { code: "INVALID_BODY", requestId: request.id } });
       request.log.error(error, "referral claim failed");
       return reply.code(500).send({ error: { code: "INTERNAL_ERROR", requestId: request.id } });
+    }
+  });
+
+  // Brink AI — real LLM answers grounded in the live market snapshot.
+  app.get("/v1/ai/status", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+    return { data: { configured: aiConfigured() }, meta: { requestId: request.id } };
+  });
+
+  app.post<{ Body: { question?: string; history?: AiTurn[] } }>("/v1/ai", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+    try {
+      const body = aiAskSchema.parse(request.body);
+      // Short-circuit before touching the indexer if there's no key to call the
+      // LLM with — the client uses this 503 to switch to its offline heuristic.
+      if (!aiConfigured()) return reply.code(503).send({ error: { code: "AI_NOT_CONFIGURED", requestId: request.id } });
+      const markets = await cache.getOrSet(() => source.listLiveBinaryMarkets());
+      const scored = scoreMarkets(markets);
+      const text = await askBrinkAI(body.question, scored, body.history ?? []);
+      return { data: { text }, meta: { requestId: request.id } };
+    } catch (error) {
+      if (error instanceof z.ZodError) return reply.code(400).send({ error: { code: "INVALID_BODY", requestId: request.id } });
+      if (error instanceof AiNotConfiguredError) return reply.code(503).send({ error: { code: "AI_NOT_CONFIGURED", requestId: request.id } });
+      request.log.error(error, "brink ai request failed");
+      return reply.code(502).send({ error: { code: "AI_UNAVAILABLE", requestId: request.id } });
     }
   });
 

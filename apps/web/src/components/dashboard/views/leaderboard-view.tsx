@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Trophy, RefreshCw } from "lucide-react";
+import { Trophy, RefreshCw, Info } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
 import { fetchLeaderboard, formatCompact, type LeaderEntry } from "@/lib/markets";
 import { shortAddress } from "@/components/dashboard/wallet";
@@ -38,7 +38,7 @@ export function LeaderboardView() {
     <div>
       <PageHeader
         title="Leaderboard"
-        subtitle="Ranked by real filled volume on Somnia."
+        subtitle="Real on-chain wallets, ranked by filled volume across the DreamDEX markets on Somnia."
         action={
           <button
             type="button"
@@ -49,6 +49,15 @@ export function LeaderboardView() {
           </button>
         }
       />
+
+      <p className="mb-4 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-[12px] leading-relaxed text-muted-sage/55">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-highlighter-green/70" />
+        <span>
+          These are real wallets trading the same on-chain DreamDEX markets Brink lists — liquidity and
+          fills are shared across every front-end on Somnia, so Brink launches with real depth instead of an
+          empty book. Every figure here is live indexer data.
+        </span>
+      </p>
 
       <div className={cn(PANEL, "overflow-hidden")}>
         {state === "error" ? (

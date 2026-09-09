@@ -100,11 +100,18 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
       if (value && key === "fillSounds") playTick();
 
+      // Turning a notification pref ON is a user gesture, so it's the moment to
+      // ask the browser for permission (Brave/Chrome show the Allow prompt) and
+      // to confirm visibly when it's already granted.
       if (value && (key === "tradeableAlerts" || key === "expiryWarnings") && typeof Notification !== "undefined") {
+        const confirm = (p: NotificationPermission) => {
+          setNotifPermission(p);
+          if (p === "granted") notify("Notifications on", "Brink will alert you here and on your desktop.");
+        };
         if (Notification.permission === "default") {
-          void Notification.requestPermission().then(setNotifPermission);
+          void Notification.requestPermission().then(confirm);
         } else {
-          setNotifPermission(Notification.permission);
+          confirm(Notification.permission);
         }
       }
     },

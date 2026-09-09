@@ -129,6 +129,34 @@ export async function claimReferral(address: string, code: string): Promise<Clai
   return payload.data;
 }
 
+/* ------------------------------ Brink AI ------------------------------- */
+
+export type AiTurn = { role: "user" | "assistant"; content: string };
+
+export async function fetchAiConfigured(): Promise<boolean> {
+  try {
+    const response = await fetch(apiBaseUrl + "/v1/ai/status", { headers: { accept: "application/json" } });
+    if (!response.ok) return false;
+    const payload: { data?: { configured?: boolean } } = await response.json();
+    return Boolean(payload.data?.configured);
+  } catch {
+    return false;
+  }
+}
+
+/** Ask the server-side LLM. Throws "AI_NOT_CONFIGURED" when no key is set. */
+export async function askBrinkAI(question: string, history: AiTurn[] = []): Promise<string> {
+  const response = await fetch(apiBaseUrl + "/v1/ai", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ question, history })
+  });
+  if (response.status === 503) throw new Error("AI_NOT_CONFIGURED");
+  if (!response.ok) throw new Error("AI_UNAVAILABLE");
+  const payload: { data?: { text?: string } } = await response.json();
+  return payload.data?.text ?? "";
+}
+
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   if (s < 60) return s + "s";

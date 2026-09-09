@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { loadEnv } from "./config/env.js";
 import { DreamDexMarketSource, EmptyMarketSource } from "./adapters/market-source.js";
 import { buildApp } from "./http/app.js";
