@@ -35,21 +35,59 @@ type Mode = "price" | "odds";
  */
 export function PriceChart({ market }: { market: ScoredMarket }) {
   const [mode, setMode] = useState<Mode>("price");
+  const touchedRef = useRef(false);
+
+  // This wallet's own fills on THIS market — drives the odds-chart B/S markers,
+  // and auto-switches the view to Odds so you always see where you traded.
+  const account = useActiveAccount();
+  const [fills, setFills] = useState<Fill[]>([]);
+
+  useEffect(() => {
+    touchedRef.current = false; // new market — allow one auto-switch again
+    setMode("price");
+    if (!account) {
+      setFills([]);
+      return;
+    }
+    let cancelled = false;
+    const run = () =>
+      fetchMyFills(account)
+        .then((all) => {
+          if (!cancelled) setFills(all.filter((f) => f.symbol === market.symbol));
+        })
+        .catch(() => undefined);
+    void run();
+    const id = window.setInterval(run, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [account, market.symbol]);
+
+  useEffect(() => {
+    if (fills.length > 0 && !touchedRef.current) setMode("odds");
+  }, [fills]);
+
+  function pick(m: Mode) {
+    touchedRef.current = true;
+    setMode(m);
+  }
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
         <div className="flex items-center gap-1 rounded-lg bg-white/[0.03] p-0.5">
-          <ModeButton active={mode === "price"} onClick={() => setMode("price")} icon={<CandlestickChart className="h-3.5 w-3.5" />}>
+          <ModeButton active={mode === "price"} onClick={() => pick("price")} icon={<CandlestickChart className="h-3.5 w-3.5" />}>
             Price
           </ModeButton>
-          <ModeButton active={mode === "odds"} onClick={() => setMode("odds")} icon={<Percent className="h-3.5 w-3.5" />}>
+          <ModeButton active={mode === "odds"} onClick={() => pick("odds")} icon={<Percent className="h-3.5 w-3.5" />}>
             Odds
+            {fills.length > 0 && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-highlighter-green align-middle" />}
           </ModeButton>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-[11px] text-muted-sage/45 sm:inline">
-            {mode === "price" ? `${market.asset} · underlying (USD)` : "YES probability (¢)"}
+            {mode === "price" ? `${market.asset} · underlying (USD)` : "YES probability (¢) · your trades marked"}
           </span>
           <LiveTag />
         </div>
@@ -62,7 +100,7 @@ export function PriceChart({ market }: { market: ScoredMarket }) {
           <TradingViewChart asset={market.asset} active={mode === "price"} />
         </div>
         <div className={cn("absolute inset-0", mode === "odds" ? "block" : "hidden")}>
-          <OddsChart market={market} active={mode === "odds"} />
+          <OddsChart market={market} active={mode === "odds"} fills={fills} />
         </div>
       </div>
     </div>
@@ -206,7 +244,7 @@ function TradingViewChart({ asset, active }: { asset: string; active: boolean })
 /* Odds — this contract's YES probability from real /v1/ohlcv          */
 /* ------------------------------------------------------------------ */
 
-function OddsChart({ market, active }: { market: ScoredMarket; active: boolean }) {
+function OddsChart({ market, active, fills }: { market: ScoredMarket; active: boolean; fills: Fill[] }) {
   const [tf, setTf] = useState<TF>("1h");
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
 
@@ -217,31 +255,7 @@ function OddsChart({ market, active }: { market: ScoredMarket; active: boolean }
   const priceLineRef = useRef<IPriceLine | null>(null);
   const entryLineRef = useRef<IPriceLine | null>(null);
 
-  // This wallet's own fills on THIS market, drawn as buy/sell markers.
-  const account = useActiveAccount();
-  const [fills, setFills] = useState<Fill[]>([]);
-
   const yes = market.bestAsk ?? 0.5;
-
-  useEffect(() => {
-    if (!account) {
-      setFills([]);
-      return;
-    }
-    let cancelled = false;
-    const run = () =>
-      fetchMyFills(account)
-        .then((all) => {
-          if (!cancelled) setFills(all.filter((f) => f.symbol === market.symbol));
-        })
-        .catch(() => undefined);
-    void run();
-    const id = window.setInterval(run, 15000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [account, market.symbol]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -451,7 +465,7 @@ function ModeButton({
   active: boolean;
   onClick: () => void;
   icon: ReactNode;
-  children: string;
+  children: ReactNode;
 }) {
   return (
     <button
