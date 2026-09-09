@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+import { captureRefFromUrl } from "@/lib/referral";
 import { SiteHeader } from "@/components/landing/site-header";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { LandingPage } from "@/pages/landing-page";
@@ -30,6 +31,11 @@ function ScrollManager() {
 
 export default function App() {
   const { pathname } = useLocation();
+
+  // Stash any inbound referral code on first load, before anything else.
+  useEffect(() => {
+    captureRefFromUrl();
+  }, []);
   // The dashboard is the "app" surface — it carries its own chrome, so the
   // marketing header/footer are hidden there.
   const isApp = pathname.startsWith("/dashboard");

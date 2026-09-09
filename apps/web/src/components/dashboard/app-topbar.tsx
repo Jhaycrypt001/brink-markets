@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { useNotifications } from "@/components/dashboard/notifications";
 import { useProfile, ProfileAvatar } from "@/components/dashboard/profile";
+import { GlassButton } from "@/components/ui/glass-button";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar({
@@ -80,14 +81,10 @@ export function AppTopbar({
             />
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={wallet.open}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-highlighter-green px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-press-black transition hover:brightness-105"
-          >
+          <GlassButton tone="green" size="sm" onClick={wallet.open} contentClassName="px-4 py-2.5">
             <Wallet className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Connect wallet</span>
-          </button>
+          </GlassButton>
         )}
       </div>
     </header>

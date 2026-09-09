@@ -78,6 +78,57 @@ export async function fetchOHLCV(
   return payload.data ?? [];
 }
 
+/* ----------------------------- Leaderboard ----------------------------- */
+
+export type LeaderEntry = {
+  address: string;
+  volume: number;
+  fills: number;
+  markets: number;
+  lastActive: number;
+};
+
+export async function fetchLeaderboard(limit = 50): Promise<LeaderEntry[]> {
+  const response = await fetch(apiBaseUrl + "/v1/leaderboard?limit=" + limit, {
+    headers: { accept: "application/json" }
+  });
+  if (!response.ok) throw new Error("LEADERBOARD_UNAVAILABLE");
+  const payload: { data?: LeaderEntry[] } = await response.json();
+  return payload.data ?? [];
+}
+
+/* ------------------------------ Referrals ------------------------------ */
+
+export type ReferralStats = {
+  address: string;
+  code: string;
+  referred: number;
+  referredBy: string | null;
+  joinedAt: number;
+};
+
+export async function fetchReferralStats(address: string): Promise<ReferralStats> {
+  const response = await fetch(apiBaseUrl + "/v1/referrals/" + address, {
+    headers: { accept: "application/json" }
+  });
+  if (!response.ok) throw new Error("REFERRALS_UNAVAILABLE");
+  const payload: { data: ReferralStats } = await response.json();
+  return payload.data;
+}
+
+export type ClaimResult = { ok: boolean; referrer: string | null; reason?: string };
+
+export async function claimReferral(address: string, code: string): Promise<ClaimResult> {
+  const response = await fetch(apiBaseUrl + "/v1/referrals/claim", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ address, code })
+  });
+  if (!response.ok) throw new Error("CLAIM_FAILED");
+  const payload: { data: ClaimResult } = await response.json();
+  return payload.data;
+}
+
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   if (s < 60) return s + "s";

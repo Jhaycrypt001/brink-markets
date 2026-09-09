@@ -50,14 +50,21 @@ export function useMarketFeed(pollMs = 5000) {
       const seenBefore = prevTradeable.current.size > 0 || warnedExpiry.current.size > 0;
       for (const m of data) {
         if (m.tradeable && !prevTradeable.current.has(m.marketId)) {
+          // Each alert channel is gated by its own toggle. When tradeableAlerts
+          // is off the app is silent — no in-app inbox entry AND no browser
+          // notification. (fillSounds is an independent audio toggle.)
           if (P.fillSounds) P.playTick();
-          inboxRef.current.push("Market tradeable", m.question);
-          if (P.tradeableAlerts) notify("Market tradeable", m.question);
+          if (P.tradeableAlerts) {
+            inboxRef.current.push("Market tradeable", m.question);
+            notify("Market tradeable", m.question);
+          }
         }
         if (m.secondsLeft > 0 && m.secondsLeft <= 60 && !warnedExpiry.current.has(m.marketId)) {
           warnedExpiry.current.add(m.marketId);
-          if (seenBefore) inboxRef.current.push("Expiry soon", m.question + " — under a minute left");
-          if (P.expiryWarnings) notify("Expiry soon", m.question + " — under a minute left");
+          if (seenBefore && P.expiryWarnings) {
+            inboxRef.current.push("Expiry soon", m.question + " — under a minute left");
+            notify("Expiry soon", m.question + " — under a minute left");
+          }
         }
       }
       prevTradeable.current = nowTradeable;
