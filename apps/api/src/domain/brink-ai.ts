@@ -26,7 +26,7 @@ function geminiKey(): string | undefined {
   return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
 }
 
-function activeProvider(): Provider {
+export function activeProvider(): Provider {
   if (geminiKey()) return "gemini";
   if (process.env.ANTHROPIC_API_KEY) return "anthropic";
   return null;
