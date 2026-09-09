@@ -64,7 +64,8 @@ export function AppTopbar({
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
         </button>
 
-        <NotificationBell />
+        {/* Notifications are a per-wallet feature — no wallet, no bell. */}
+        {wallet.ready && <NotificationBell />}
 
         {wallet.ready ? (
           <button

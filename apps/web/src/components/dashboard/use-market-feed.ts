@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useActiveAccount } from "thirdweb/react";
 import { fetchMarkets, type ScoredMarket } from "@/lib/markets";
 import { usePrefs, notify } from "./prefs";
 import { useNotifications } from "./notifications";
@@ -29,6 +30,11 @@ export function useMarketFeed(pollMs = 5000) {
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
 
+  // Alerts are a per-wallet feature: fire only while a wallet is connected.
+  const account = useActiveAccount();
+  const connectedRef = useRef(false);
+  connectedRef.current = Boolean(account);
+
   const poll = useCallback(async () => {
     try {
       const data = await fetchMarkets(48);
@@ -48,7 +54,8 @@ export function useMarketFeed(pollMs = 5000) {
       const P = prefsRef.current;
       const nowTradeable = new Set(data.filter((m) => m.tradeable).map((m) => m.marketId));
       const seenBefore = prevTradeable.current.size > 0 || warnedExpiry.current.size > 0;
-      for (const m of data) {
+      // No wallet connected → no alerts at all (in-app or browser).
+      for (const m of connectedRef.current ? data : []) {
         if (m.tradeable && !prevTradeable.current.has(m.marketId)) {
           // Each alert channel is gated by its own toggle. When tradeableAlerts
           // is off the app is silent — no in-app inbox entry AND no browser

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MotionConfig } from "framer-motion";
+import { useActiveAccount } from "thirdweb/react";
 
 /**
  * Preferences — the real settings engine. Each preference drives actual
@@ -38,11 +39,18 @@ export function usePrefs(): PrefsContext {
   return ctx;
 }
 
-function read(): Prefs {
+// Preferences are scoped to the connected wallet, so each address keeps its own
+// alert and display settings. Before any wallet connects they fall back to a
+// shared "guest" scope.
+function scopeKey(address: string | null, key: PrefKey): string {
+  return `brink.pref.${address ?? "guest"}.${key}`;
+}
+
+function read(address: string | null): Prefs {
   const out = { ...DEFAULTS };
   try {
     for (const key of Object.keys(DEFAULTS) as PrefKey[]) {
-      const v = localStorage.getItem("brink.pref." + key);
+      const v = localStorage.getItem(scopeKey(address, key));
       if (v !== null) out[key] = v === "true";
     }
   } catch {
@@ -52,15 +60,19 @@ function read(): Prefs {
 }
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
+  const account = useActiveAccount();
+  const address = account?.address ? account.address.toLowerCase() : null;
+
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
   const audioRef = useRef<AudioContext | null>(null);
 
+  // Reload the right preference set whenever the connected wallet changes.
   useEffect(() => {
-    setPrefs(read());
-  }, []);
+    setPrefs(read(address));
+  }, [address]);
 
   const playTick = useCallback(() => {
     try {
@@ -91,7 +103,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       setPrefs((prev) => {
         const next = { ...prev, [key]: value };
         try {
-          localStorage.setItem("brink.pref." + key, String(value));
+          localStorage.setItem(scopeKey(address, key), String(value));
         } catch {
           /* ignore */
         }
@@ -115,7 +127,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [playTick]
+    [playTick, address]
   );
 
   const requestNotifPermission = useCallback(() => {

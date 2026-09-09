@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useActiveAccount } from "thirdweb/react";
 
 /**
  * In-app notifications inbox — the source for the topbar bell. The live feed
@@ -25,7 +26,15 @@ export function useNotifications(): NotificationsCtx {
 }
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
+  const account = useActiveAccount();
+  const address = account?.address ?? null;
   const [notices, setNotices] = useState<Notice[]>([]);
+
+  // The inbox belongs to the connected wallet — reset it when the account
+  // changes (connect, disconnect, or switch) so alerts never bleed across.
+  useEffect(() => {
+    setNotices([]);
+  }, [address]);
 
   const push = useCallback((title: string, body: string) => {
     setNotices((prev) => {

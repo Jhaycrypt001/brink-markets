@@ -16,6 +16,7 @@ const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
  */
 export function SettingsView() {
   const prefs = usePrefs();
+  const wallet = useWallet();
   const wantsNotif = prefs.tradeableAlerts || prefs.expiryWarnings;
   // "default" → we can still ask (Allow prompt). "denied" → only the user can
   // re-enable it in browser site settings; JS cannot. Be honest about which.
@@ -38,6 +39,12 @@ export function SettingsView() {
       </Section>
 
       <Section title="Notifications" icon={Bell}>
+        {!wallet.ready ? (
+          <p className="px-5 py-4 text-[13px] text-muted-sage/60">
+            Alert preferences are saved per wallet. Connect a wallet to set them — each address keeps its own.
+          </p>
+        ) : (
+          <>
         {needsAllow && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.04] bg-highlighter-green/[0.04] px-5 py-3">
             <p className="text-[12px] text-[#e0b06a]">
@@ -61,6 +68,8 @@ export function SettingsView() {
         )}
         <Toggle prefKey="tradeableAlerts" label="Tradeable alerts" hint="Notify when a market clears every gate." />
         <Toggle prefKey="expiryWarnings" label="Expiry warnings" hint="Warn when a market is under a minute from expiry." />
+          </>
+        )}
       </Section>
 
       <Section title="Security" icon={Shield}>

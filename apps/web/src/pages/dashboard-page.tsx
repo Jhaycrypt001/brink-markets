@@ -23,15 +23,17 @@ import { cn } from "@/lib/utils";
 
 export function DashboardPage() {
   return (
-    <PreferencesProvider>
-      <WalletProvider>
+    // WalletProvider is outermost so Preferences and Notifications (both keyed
+    // per connected wallet address) can read the active account.
+    <WalletProvider>
+      <PreferencesProvider>
         <NotificationsProvider>
           <ProfileProvider>
             <DashboardInner />
           </ProfileProvider>
         </NotificationsProvider>
-      </WalletProvider>
-    </PreferencesProvider>
+      </PreferencesProvider>
+    </WalletProvider>
   );
 }
 
