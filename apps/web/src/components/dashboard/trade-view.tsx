@@ -59,7 +59,7 @@ function MarketHeader({ market, elapsed }: { market: ScoredMarket; elapsed: numb
   const secondsLeft = Math.max(0, market.secondsLeft - elapsed);
 
   return (
-    <div className={cn(PANEL, "flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3")}>
+    <div className={cn(PANEL, "flex flex-wrap items-center gap-x-4 gap-y-3 px-3 py-3 sm:gap-x-6 sm:px-4")}>
       <button type="button" className="flex items-center gap-2.5 rounded-lg bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.05]">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-[11px] font-bold text-bone-white">
           {market.asset.slice(0, 3)}
@@ -78,7 +78,7 @@ function MarketHeader({ market, elapsed }: { market: ScoredMarket; elapsed: numb
         <span className="text-[11px] uppercase tracking-wider text-muted-sage/45">YES</span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:gap-x-6">
         <Stat label="Best bid" value={market.bestBid ? Math.round(market.bestBid * 100) + "¢" : "—"} tone="accent" />
         <Stat label="Best ask" value={market.bestAsk ? Math.round(market.bestAsk * 100) + "¢" : "—"} />
         <Stat label="Spread" value={market.spread === undefined ? "—" : Math.round(market.spread * 100) + " pts"} />

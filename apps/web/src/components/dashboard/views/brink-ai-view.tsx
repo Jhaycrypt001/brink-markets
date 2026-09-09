@@ -98,7 +98,7 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col">
+    <div className="mx-auto flex h-[calc(100dvh-7rem)] min-h-[440px] max-w-3xl flex-col">
       <div className="mb-4 flex items-center gap-2.5">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-highlighter-green/12 text-highlighter-green">
           <Bot className="h-5 w-5" />

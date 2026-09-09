@@ -35,7 +35,7 @@ export function AppTopbar({
         <Menu className="h-5 w-5" />
       </button>
 
-      <label className="relative flex max-w-md flex-1 items-center">
+      <label className="relative hidden min-w-0 max-w-md flex-1 items-center sm:flex">
         <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-sage/40" />
         <input
           type="search"
@@ -43,6 +43,8 @@ export function AppTopbar({
           className="h-10 w-full rounded-lg border border-white/[0.06] bg-white/[0.03] pl-9 pr-3 text-[13px] text-bone-white placeholder:text-muted-sage/40 focus:border-white/[0.12] focus:outline-none"
         />
       </label>
+      {/* On phones the search is hidden; keep the actions pinned right. */}
+      <div className="flex-1 sm:hidden" />
 
       <div className="ml-auto flex items-center gap-2">
         <span
