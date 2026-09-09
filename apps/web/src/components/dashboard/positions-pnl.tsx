@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { RefreshCw, Loader2, Coins, TrendingUp } from "lucide-react";
+import { RefreshCw, Loader2, Coins, TrendingUp, Share2 } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
 import { fetchPositions, redeemPosition, type Position } from "@/lib/trade";
 import { useNotifications } from "@/components/dashboard/notifications";
+import { PnlCardModal } from "@/components/dashboard/pnl-card";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -21,6 +22,7 @@ export function PositionsPnl() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [shareOf, setShareOf] = useState<Position | null>(null);
 
   const load = useCallback(async () => {
     if (!account) return;
@@ -132,15 +134,25 @@ export function PositionsPnl() {
                       {pnl === null ? "—" : `${usd(pnl)}${pct !== null ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)` : ""}`}
                     </td>
                     <td className="py-2 pr-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => void redeem(p)}
-                        disabled={redeeming === p.symbol}
-                        className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-muted-sage/80 hover:text-bone-white disabled:opacity-50"
-                      >
-                        {redeeming === p.symbol ? <Loader2 className="h-3 w-3 animate-spin" /> : <Coins className="h-3 w-3" />}
-                        Redeem
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setShareOf(p)}
+                          className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[11px] font-semibold text-muted-sage/80 hover:text-bone-white"
+                          aria-label="Share position"
+                        >
+                          <Share2 className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void redeem(p)}
+                          disabled={redeeming === p.symbol}
+                          className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-muted-sage/80 hover:text-bone-white disabled:opacity-50"
+                        >
+                          {redeeming === p.symbol ? <Loader2 className="h-3 w-3 animate-spin" /> : <Coins className="h-3 w-3" />}
+                          Redeem
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -149,6 +161,8 @@ export function PositionsPnl() {
           </table>
         </div>
       )}
+
+      <PnlCardModal position={shareOf} onClose={() => setShareOf(null)} />
     </div>
   );
 }

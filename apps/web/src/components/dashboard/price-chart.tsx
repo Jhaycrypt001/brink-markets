@@ -6,11 +6,14 @@ import {
   type IChartApi,
   type ISeriesApi,
   type IPriceLine,
+  type SeriesMarker,
   type UTCTimestamp
 } from "lightweight-charts";
 import { Activity, CandlestickChart, Percent } from "lucide-react";
+import { useActiveAccount } from "thirdweb/react";
 import type { ScoredMarket } from "@/lib/markets";
 import { fetchOHLCV } from "@/lib/markets";
+import { fetchMyFills, type Fill } from "@/lib/trade";
 import { cn } from "@/lib/utils";
 
 const TIMEFRAMES = ["5m", "15m", "1h", "4h"] as const;
@@ -212,8 +215,33 @@ function OddsChart({ market, active }: { market: ScoredMarket; active: boolean }
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const priceLineRef = useRef<IPriceLine | null>(null);
+  const entryLineRef = useRef<IPriceLine | null>(null);
+
+  // This wallet's own fills on THIS market, drawn as buy/sell markers.
+  const account = useActiveAccount();
+  const [fills, setFills] = useState<Fill[]>([]);
 
   const yes = market.bestAsk ?? 0.5;
+
+  useEffect(() => {
+    if (!account) {
+      setFills([]);
+      return;
+    }
+    let cancelled = false;
+    const run = () =>
+      fetchMyFills(account)
+        .then((all) => {
+          if (!cancelled) setFills(all.filter((f) => f.symbol === market.symbol));
+        })
+        .catch(() => undefined);
+    void run();
+    const id = window.setInterval(run, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [account, market.symbol]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -332,6 +360,43 @@ function OddsChart({ market, active }: { market: ScoredMarket; active: boolean }
       title: "live"
     });
   }, [yes, state]);
+
+  // Draw the wallet's fills as markers (buy = green ▲ below, sell = red ▼ above)
+  // plus a dashed average-entry line — so the chart shows where you traded.
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || state !== "ready") return;
+
+    const markers: SeriesMarker<UTCTimestamp>[] = [...fills]
+      .filter((f) => f.timestamp)
+      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+      .map((f) => ({
+        time: Math.floor((f.timestamp ?? Date.now()) / 1000) as UTCTimestamp,
+        position: f.side === "buy" ? "belowBar" : "aboveBar",
+        color: f.side === "buy" ? GREEN : RED,
+        shape: f.side === "buy" ? "arrowUp" : "arrowDown",
+        text: `${f.side === "buy" ? "Buy" : "Sell"} ${f.amount} @ ${Math.round(f.price * 100)}¢`
+      }));
+    series.setMarkers(markers);
+
+    const buys = fills.filter((f) => f.side === "buy");
+    const qty = buys.reduce((s, f) => s + f.amount, 0);
+    const avg = qty > 0 ? buys.reduce((s, f) => s + f.price * f.amount, 0) / qty : null;
+    if (entryLineRef.current) {
+      series.removePriceLine(entryLineRef.current);
+      entryLineRef.current = null;
+    }
+    if (avg !== null) {
+      entryLineRef.current = series.createPriceLine({
+        price: avg,
+        color: "rgba(43,238,75,0.55)",
+        lineWidth: 1,
+        lineStyle: 0,
+        axisLabelVisible: true,
+        title: "avg"
+      });
+    }
+  }, [fills, state]);
 
   // Lightweight Charts measures on mount; if it mounted while hidden it reads 0
   // width, so nudge a resize the first time this view becomes active.
