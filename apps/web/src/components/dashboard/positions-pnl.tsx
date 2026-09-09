@@ -43,9 +43,12 @@ export function PositionsPnl() {
   async function redeem(p: Position) {
     if (!account) return;
     setRedeeming(p.symbol);
-    setNote(null);
+    // Redeem is signed in up to 2 steps (approve, then collect). Wallets often
+    // can't show a gas estimate on the 2nd — set expectations up front.
+    setNote("Redeeming takes up to 2 wallet signatures — approve both. Your wallet may not show a gas estimate on the 2nd; that's normal, confirm it anyway.");
     try {
       await redeemPosition(account, p.marketRef, p.shares);
+      setNote("Redeemed — the USDC is back in your Trading balance.");
       inbox.push("Redeemed", `${p.shares} ${p.outcome} · ${tidy(p.marketRef)}`);
       await load();
     } catch (err) {
