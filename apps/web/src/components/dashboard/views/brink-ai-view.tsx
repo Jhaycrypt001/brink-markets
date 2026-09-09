@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bot, ArrowUp, Sparkles } from "lucide-react";
-import type { ScoredMarket } from "@/lib/markets";
-import { formatDuration } from "@/lib/markets";
+import type { ScoredMarket, AiTurn } from "@/lib/markets";
+import { formatDuration, askBrinkAI, fetchAiConfigured } from "@/lib/markets";
 import { PANEL } from "./_shared";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,11 @@ const SEED: Msg[] = [
   { role: "ai", text: "I'm Brink AI. Ask me to surface markets, explain a score, or spot a setup — I answer from the live feed the terminal reads." }
 ];
 
-/** Rule-based answers computed over the REAL live feed (no fabricated data). */
+/**
+ * Offline fallback: rule-based answers computed over the REAL live feed. Used
+ * only when the AI backend has no key configured or is unreachable, so the
+ * assistant is never dead — but the primary path is the real LLM.
+ */
 function answer(prompt: string, markets: ScoredMarket[]): string {
   if (markets.length === 0)
     return "There are no live markets on the feed right now, so there's nothing to rank. New DreamDEX markets show up here the moment they go live.";
@@ -53,22 +57,42 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
   const [messages, setMessages] = useState<Msg[]>(SEED);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  // null = unknown yet, true = real LLM wired, false = offline heuristic mode.
+  const [aiLive, setAiLive] = useState<boolean | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchAiConfigured().then((ok) => alive && setAiLive(ok));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const q = text.trim();
     if (!q || thinking) return;
+    const history: AiTurn[] = messages
+      .filter((m) => m.text)
+      .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
     setMessages((m) => [...m, { role: "user", text: q }]);
     setInput("");
     setThinking(true);
-    window.setTimeout(() => {
+    try {
+      const reply = await askBrinkAI(q, history);
+      setMessages((m) => [...m, { role: "ai", text: reply }]);
+      setAiLive(true);
+    } catch (err) {
+      // No key or backend unreachable → fall back to the local heuristic.
+      if (err instanceof Error && err.message === "AI_NOT_CONFIGURED") setAiLive(false);
       setMessages((m) => [...m, { role: "ai", text: answer(q, markets) }]);
+    } finally {
       setThinking(false);
-    }, 500);
+    }
   }
 
   return (
@@ -79,10 +103,19 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
         </span>
         <div>
           <h1 className="font-display text-[1.6rem] leading-none tracking-[-0.03em]">Brink AI</h1>
-          <p className="text-[12px] text-muted-sage/55">Natural-language market discovery · live soon</p>
+          <p className="text-[12px] text-muted-sage/55">
+            {aiLive === false
+              ? "Offline heuristic — set ANTHROPIC_API_KEY to enable the LLM"
+              : "Natural-language market discovery, grounded in the live feed"}
+          </p>
         </div>
-        <span className="ml-auto rounded-full bg-highlighter-green/12 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-highlighter-green">
-          Live
+        <span
+          className={cn(
+            "ml-auto rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wider",
+            aiLive === false ? "bg-white/[0.06] text-muted-sage/70" : "bg-highlighter-green/12 text-highlighter-green"
+          )}
+        >
+          {aiLive === false ? "Heuristic" : aiLive ? "AI · Live" : "Live"}
         </span>
       </div>
 
@@ -119,7 +152,7 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
             <button
               key={s}
               type="button"
-              onClick={() => send(s)}
+              onClick={() => void send(s)}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[12px] text-muted-sage/80 transition hover:border-white/[0.16] hover:text-bone-white"
             >
               <Sparkles className="h-3 w-3 text-highlighter-green" /> {s}
@@ -131,7 +164,7 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          send(input);
+          void send(input);
         }}
         className="mt-3 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2"
       >

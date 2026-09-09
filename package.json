@@ -21,8 +21,10 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "@fastify/cors": "^10.0.1",
     "@somnia-chain/markets-sdk": "^0.29.0",
+    "dotenv": "^17.4.2",
     "fastify": "^5.2.1",
     "zod": "^3.24.1"
   }
