@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWalletBalance } from "thirdweb/react";
 import { useWallet, shortAddress, somniaShannon, thirdwebClient } from "@/components/dashboard/wallet";
 import { PositionsPanel } from "@/components/dashboard/positions-panel";
+import { PositionsPnl } from "@/components/dashboard/positions-pnl";
 import { GlassButton } from "@/components/ui/glass-button";
 import { PANEL, PageHeader } from "./_shared";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ export function WalletView() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <BalanceCard address={wallet.address ?? ""} onDeposit={() => setDepositOpen(true)} />
+          <PositionsPnl />
           <PositionsPanel />
         </div>
 

@@ -119,3 +119,92 @@ export async function cancelBrinkOrder(account: Account, id: string, symbol: str
   const exchange = await getExchange(account);
   return exchange.cancelOrder(id, symbol);
 }
+
+/* ----------------------------- Positions + PnL ---------------------------- */
+
+export type Position = {
+  /** Outcome-token symbol, e.g. "BTC-…/USDC#YES". */
+  symbol: string;
+  /** Market ref without the outcome suffix, used for redeem. */
+  marketRef: string;
+  outcome: "YES" | "NO";
+  /** Shares held. */
+  shares: number;
+  /** Avg entry price (0..1), from this wallet's buy fills. null if unknown. */
+  avgCost: number | null;
+  /** Current sellable price = best bid (0..1). null if the book has no bid. */
+  markPrice: number | null;
+  /** shares × avgCost (what you paid), in USDC. */
+  costBasis: number | null;
+  /** shares × markPrice (what it's worth now), in USDC. null if unmarked. */
+  value: number | null;
+  /** value − costBasis, in USDC. null if unmarked. */
+  unrealizedPnl: number | null;
+};
+
+/**
+ * Real open positions with avg-cost PnL. Holdings come from fetchBalance()
+ * (on-chain outcome-token balances); average entry is folded from this wallet's
+ * own buy fills; the mark is the current best bid (what you could sell for now).
+ * Everything is live chain/indexer data — nothing is mocked.
+ */
+export async function fetchPositions(account: Account): Promise<Position[]> {
+  const exchange = await getExchange(account);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [balances, fills] = await Promise.all([
+    exchange.fetchBalance() as Promise<Record<string, { total?: number }>>,
+    exchange.fetchMyTrades(undefined, undefined, 200) as Promise<
+      Array<{ symbol?: string; side?: string; price?: number; amount?: number }>
+    >
+  ]);
+
+  // Weighted-average entry from buy fills, per outcome symbol.
+  const buyAgg = new Map<string, { cost: number; qty: number }>();
+  for (const f of fills) {
+    if (f.side !== "buy" || !f.symbol) continue;
+    const price = Number(f.price ?? 0);
+    const amount = Number(f.amount ?? 0);
+    if (amount <= 0) continue;
+    const a = buyAgg.get(f.symbol) ?? { cost: 0, qty: 0 };
+    a.cost += price * amount;
+    a.qty += amount;
+    buyAgg.set(f.symbol, a);
+  }
+
+  const held = Object.entries(balances)
+    .filter(([code, b]) => code.includes("#") && Number(b.total ?? 0) > 0)
+    .map(([symbol, b]) => ({ symbol, shares: Number(b.total ?? 0) }));
+
+  const positions = await Promise.all(
+    held.map(async ({ symbol, shares }): Promise<Position> => {
+      const [marketRef, outcomeRaw] = symbol.split("#");
+      const outcome: "YES" | "NO" = outcomeRaw === "NO" ? "NO" : "YES";
+      const agg = buyAgg.get(symbol);
+      const avgCost = agg && agg.qty > 0 ? agg.cost / agg.qty : null;
+
+      let markPrice: number | null = null;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const book: any = await exchange.fetchOrderBook(symbol, 1);
+        const bestBid = book?.bids?.[0]?.[0];
+        markPrice = typeof bestBid === "number" ? bestBid : null;
+      } catch {
+        markPrice = null;
+      }
+
+      const costBasis = avgCost !== null ? shares * avgCost : null;
+      const value = markPrice !== null ? shares * markPrice : null;
+      const unrealizedPnl = value !== null && costBasis !== null ? value - costBasis : null;
+
+      return { symbol, marketRef, outcome, shares, avgCost, markPrice, costBasis, value, unrealizedPnl };
+    })
+  );
+
+  return positions.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+}
+
+/** Redeem a resolved market's winning shares for USDC collateral. */
+export async function redeemPosition(account: Account, marketRef: string, shares: number) {
+  const exchange = await getExchange(account);
+  return exchange.redeem(marketRef, shares);
+}
