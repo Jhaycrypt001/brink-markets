@@ -47,10 +47,19 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
   const leaderboardCache = new TtlCache<LeaderEntry[]>(30_000, 120_000);
   const referrals = new ReferralStore();
 
-  // CORS_ORIGIN may be a comma-separated list so both localhost and 127.0.0.1
-  // (the two hosts Vite serves on) are accepted without extra config.
+  // CORS: explicitly-configured origins are always allowed, and ANY local
+  // origin (localhost / 127.0.0.1 on any port) is allowed too — so the dev app
+  // works whichever host+port Vite picks (5173, 5174, localhost vs 127.0.0.1)
+  // without hand-editing CORS_ORIGIN. Requests with no Origin (curl, health
+  // checks, server-to-server) are always allowed.
   const origins = corsOrigin.split(",").map((value) => value.trim()).filter(Boolean);
-  await app.register(cors, { origin: origins.length > 1 ? origins : origins[0] ?? corsOrigin });
+  const localOriginRe = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+  await app.register(cors, {
+    origin(origin, cb) {
+      if (!origin || localOriginRe.test(origin) || origins.includes(origin)) cb(null, true);
+      else cb(null, false);
+    }
+  });
 
   app.get("/health", async (request, reply) => {
     reply.header("x-request-id", request.id);
