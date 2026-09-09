@@ -220,3 +220,17 @@
     transition: none;
   }
 }
+
+/* Dashboard density: the terminal is tuned dense, so scale it down a notch on
+   larger desktops where 100% otherwise reads too large. Scales uniformly (chrome
+   + content) and progressively; the Compact-density pref scales further. */
+@media (min-width: 1280px) {
+  .brink-dashboard {
+    zoom: 0.9;
+  }
+}
+@media (min-width: 1680px) {
+  .brink-dashboard {
+    zoom: 0.85;
+  }
+}

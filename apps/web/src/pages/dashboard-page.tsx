@@ -72,7 +72,7 @@ function DashboardInner() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0c0f0d] text-bone-white">
+    <div className="brink-dashboard min-h-screen bg-[#0c0f0d] text-bone-white">
       {intro && <BrinkLoader onComplete={() => setIntro(false)} />}
 
       <aside
