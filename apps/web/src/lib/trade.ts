@@ -208,3 +208,22 @@ export async function redeemPosition(account: Account, marketRef: string, shares
   const exchange = await getExchange(account);
   return exchange.redeem(marketRef, shares);
 }
+
+/**
+ * The wallet's live trading balance — the venue's collateral token (testnet
+ * USDC). This is the balance that goes down when you buy and up when you sell or
+ * redeem a winner. Read straight from the SDK's on-chain balance map.
+ */
+export async function fetchTradingBalance(account: Account): Promise<number | null> {
+  const exchange = await getExchange(account);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bal: Record<string, { total?: number }> = await exchange.fetchBalance();
+  const usdc = bal["USDC"]?.total;
+  if (typeof usdc === "number") return usdc;
+  // Fallback: the largest non-outcome (no "#") balance is the collateral.
+  const best = Object.entries(bal)
+    .filter(([code]) => !code.includes("#"))
+    .map(([, v]) => Number(v?.total ?? 0))
+    .sort((a, b) => b - a)[0];
+  return Number.isFinite(best) ? best : null;
+}

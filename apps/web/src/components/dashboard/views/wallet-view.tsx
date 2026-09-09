@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Wallet as WalletIcon, ShieldCheck, ArrowDownToLine, Copy, Check, ExternalLink, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useWalletBalance } from "thirdweb/react";
+import { useWalletBalance, useActiveAccount } from "thirdweb/react";
 import { useWallet, shortAddress, somniaShannon, thirdwebClient } from "@/components/dashboard/wallet";
 import { PositionsPanel } from "@/components/dashboard/positions-panel";
 import { PositionsPnl } from "@/components/dashboard/positions-pnl";
+import { fetchTradingBalance } from "@/lib/trade";
 import { GlassButton } from "@/components/ui/glass-button";
 import { PANEL, PageHeader } from "./_shared";
 import { cn } from "@/lib/utils";
@@ -90,15 +91,35 @@ function BalanceCard({ address, onDeposit }: { address: string; onDeposit: () =>
     address
   });
 
+  // Live trading balance (testnet USDC) — the one that moves with your trades.
+  const account = useActiveAccount();
+  const [usdc, setUsdc] = useState<number | null>(null);
+  useEffect(() => {
+    if (!account) return;
+    let alive = true;
+    const run = () => fetchTradingBalance(account).then((v) => alive && setUsdc(v)).catch(() => undefined);
+    void run();
+    const id = window.setInterval(run, 10000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, [account]);
+
   return (
     <div className={cn(PANEL, "p-5")}>
-      <p className="text-[11px] uppercase tracking-wider text-muted-sage/45">Balance</p>
+      <p className="text-[11px] uppercase tracking-wider text-muted-sage/45">Trading balance</p>
       <p className="mt-2 font-display text-[3rem] leading-none tracking-[-0.03em] text-bone-white tabular-nums">
-        {isLoading ? "…" : `${Number(data?.displayValue ?? 0).toFixed(4)}`}
-        <span className="ml-2 text-[1.25rem] text-muted-sage/60">{data?.symbol ?? "STT"}</span>
+        {usdc === null ? "…" : usdc.toFixed(2)}
+        <span className="ml-2 text-[1.25rem] text-muted-sage/60">USDC</span>
       </p>
-      <p className="mt-2 text-[13px] text-muted-sage/55">
-        Live STT balance (gas). You also need testnet USDC to buy and sell — grab both from the faucet.
+      <div className="mt-3 flex items-center gap-2 text-[12px] text-muted-sage/55">
+        <span className="rounded-md bg-white/[0.04] px-2 py-1 tabular-nums">
+          Gas: {isLoading ? "…" : Number(data?.displayValue ?? 0).toFixed(4)} {data?.symbol ?? "STT"}
+        </span>
+      </div>
+      <p className="mt-3 text-[13px] text-muted-sage/55">
+        Your USDC drops when you buy and rises when you sell or redeem a winner — live. STT only pays gas.
       </p>
       <GlassButton tone="green" onClick={onDeposit} className="mt-5">
         <ArrowDownToLine className="h-4 w-4" /> Deposit
