@@ -3,6 +3,7 @@ import { Bot, Sparkles } from "lucide-react";
 import type { ScoredMarket, AiTurn } from "@/lib/markets";
 import { formatDuration, askBrinkAI, fetchAiConfigured } from "@/lib/markets";
 import { PromptBox } from "@/components/ui/prompt-box";
+import { MessageLoading } from "@/components/ui/message-loading";
 import { PANEL } from "./_shared";
 import { cn } from "@/lib/utils";
 
@@ -137,10 +138,8 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
         ))}
         {thinking && (
           <div className="flex justify-start">
-            <div className="flex items-center gap-1.5 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
-              {[0, 1, 2].map((d) => (
-                <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-sage/60" style={{ animationDelay: d * 0.12 + "s" }} />
-              ))}
+            <div className="flex items-center rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+              <MessageLoading className="text-highlighter-green/80" />
             </div>
           </div>
         )}
