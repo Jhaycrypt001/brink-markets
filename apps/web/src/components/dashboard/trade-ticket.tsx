@@ -7,17 +7,21 @@ import { useNotifications } from "@/components/dashboard/notifications";
 import { cn } from "@/lib/utils";
 
 type Side = "buy" | "sell";
+type Tif = "IOC" | "GTC";
 type Status = { kind: "idle" | "signing" | "ok" | "error"; message?: string };
 
 /**
  * TradeTicket — a real order ticket. Buy YES or Sell at a limit price against the
- * live book; on submit the connected wallet signs an IOC order on Somnia via the
- * markets SDK. Nothing is mocked: cost, balance gate, and submission are real.
+ * live book; on submit the connected wallet signs the order on Somnia via the
+ * markets SDK. Order type is IOC (fill now, cancel the rest) or GTC (rest on the
+ * book until filled or cancelled). Nothing is mocked: cost, gate, and submission
+ * are real.
  */
 export function TradeTicket({ market }: { market: ScoredMarket }) {
   const account = useActiveAccount();
   const inbox = useNotifications();
   const [side, setSide] = useState<Side>("buy");
+  const [tif, setTif] = useState<Tif>("IOC");
   const [amount, setAmount] = useState("10");
   const [priceCents, setPriceCents] = useState<string>("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -50,10 +54,14 @@ export function TradeTicket({ market }: { market: ScoredMarket }) {
         side,
         quantity: qty,
         price: cents / 100,
-        timeInForce: "IOC"
+        timeInForce: tif
       });
-      setStatus({ kind: "ok", message: `${side === "buy" ? "Bought" : "Sold"} ${qty} @ ${cents}¢ (IOC)` });
-      inbox.push("Order submitted", `${side === "buy" ? "Buy" : "Sell"} ${qty} · ${market.question}`);
+      const verb = tif === "GTC" ? "Placed" : side === "buy" ? "Bought" : "Sold";
+      setStatus({ kind: "ok", message: `${verb} ${qty} @ ${cents}¢ (${tif})` });
+      inbox.push(
+        tif === "GTC" ? "Order resting" : "Order filled",
+        `${side === "buy" ? "Buy" : "Sell"} ${qty} @ ${cents}¢ · ${market.question}`
+      );
     } catch (err) {
       setStatus({ kind: "error", message: err instanceof Error ? err.message : "Order failed. Check funds and try again." });
     }
@@ -86,6 +94,14 @@ export function TradeTicket({ market }: { market: ScoredMarket }) {
             <span className="text-[13px] text-muted-sage/50">¢</span>
           </div>
         </Field>
+
+        <div>
+          <span className="mb-1 block px-1 text-[10px] uppercase tracking-wider text-muted-sage/45">Order type</span>
+          <div className="flex items-center gap-1 rounded-lg bg-white/[0.03] p-0.5">
+            <TifButton active={tif === "IOC"} onClick={() => setTif("IOC")} title="Fill now" sub="Fill or cancel" />
+            <TifButton active={tif === "GTC"} onClick={() => setTif("GTC")} title="Rest on book" sub="Sits until filled" />
+          </div>
+        </div>
 
         <div className="flex items-center justify-between px-1 text-[12px]">
           <span className="text-muted-sage/55">Est. cost</span>
@@ -125,10 +141,14 @@ export function TradeTicket({ market }: { market: ScoredMarket }) {
               <Loader2 className="h-4 w-4 animate-spin" /> Signing…
             </>
           ) : (
-            <>{side === "buy" ? "Buy YES" : "Sell"} · IOC</>
+            <>{side === "buy" ? "Buy YES" : "Sell"} · {tif}</>
           )}
         </button>
-        <p className="mt-2 text-center text-[10px] text-muted-sage/40">Immediate-or-cancel · signed in your wallet</p>
+        <p className="mt-2 text-center text-[10px] text-muted-sage/40">
+          {tif === "IOC"
+            ? "Immediate-or-cancel · signed in your wallet"
+            : "Rests on the book until filled or cancelled · signed in your wallet"}
+        </p>
       </div>
     </div>
   );
@@ -149,6 +169,22 @@ function SideButton({ active, tone, onClick, children }: { active: boolean; tone
       )}
     >
       {children}
+    </button>
+  );
+}
+
+function TifButton({ active, onClick, title, sub }: { active: boolean; onClick: () => void; title: string; sub: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex-1 rounded-md px-2 py-1.5 text-left transition-colors",
+        active ? "bg-white/[0.08]" : "hover:bg-white/[0.04]"
+      )}
+    >
+      <span className={cn("block text-[12px] font-semibold", active ? "text-bone-white" : "text-muted-sage/70")}>{title}</span>
+      <span className="block text-[10px] text-muted-sage/45">{sub}</span>
     </button>
   );
 }
