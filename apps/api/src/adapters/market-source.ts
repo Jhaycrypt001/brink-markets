@@ -32,31 +32,43 @@ export class DreamDexMarketSource implements MarketSource {
   public async listLiveBinaryMarkets(): Promise<BinaryMarket[]> {
     const now = Date.now();
     const unifiedMarkets = await this.exchange.loadMarkets(true);
-    const markets: BinaryMarket[] = [];
 
-    for (const unified of Object.values(unifiedMarkets)) {
-      if (unified.type !== "binary" || !unified.active || !isBinaryMarket(unified.info)) continue;
-      const market = unified.info;
-      const onchain = await this.exchange.client.getMarketOnchain(market.marketId);
-      const outcome = unified.outcomes?.[0];
-      if (!outcome) continue;
-      const book = await this.exchange.fetchOrderBook(outcome.symbol, 5);
-      markets.push({
-        marketId: market.marketId,
-        symbol: outcome.symbol,
-        question: market.question,
-        asset: market.asset,
-        intervalSec: Number(market.intervalSec ?? 0),
-        expiry: Number(market.expiry),
-        status: onchain.status === 1 ? "Trading" : "Locked",
-        volume: Number(market.cumulativeQuoteVolume) / 10 ** market.quoteDecimals,
-        tradeCount: Number(market.tradeCount),
-        // Do not pass `book.info` through: the SDK keeps raw bigint levels
-        // there for advanced callers, but API payloads must be JSON-safe.
-        orderBook: { bids: book.bids, asks: book.asks, observedAt: now }
-      });
-    }
-    return markets;
+    // Each market needs an on-chain status read and an order-book read. Doing
+    // those sequentially across every market stacks the round-trips into tens of
+    // seconds. Fan them out: every market resolves in parallel, and a single
+    // market's read failing drops just that market instead of the whole list.
+    const rows = await Promise.all(
+      Object.values(unifiedMarkets).map(async (unified): Promise<BinaryMarket | null> => {
+        if (unified.type !== "binary" || !unified.active || !isBinaryMarket(unified.info)) return null;
+        const market = unified.info;
+        const outcome = unified.outcomes?.[0];
+        if (!outcome) return null;
+        try {
+          const [onchain, book] = await Promise.all([
+            this.exchange.client.getMarketOnchain(market.marketId),
+            this.exchange.fetchOrderBook(outcome.symbol, 5)
+          ]);
+          return {
+            marketId: market.marketId,
+            symbol: outcome.symbol,
+            question: market.question,
+            asset: market.asset,
+            intervalSec: Number(market.intervalSec ?? 0),
+            expiry: Number(market.expiry),
+            status: onchain.status === 1 ? "Trading" : "Locked",
+            volume: Number(market.cumulativeQuoteVolume) / 10 ** market.quoteDecimals,
+            tradeCount: Number(market.tradeCount),
+            // Do not pass `book.info` through: the SDK keeps raw bigint levels
+            // there for advanced callers, but API payloads must be JSON-safe.
+            orderBook: { bids: book.bids, asks: book.asks, observedAt: now }
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return rows.filter((row): row is BinaryMarket => row !== null);
   }
 
   public async fetchOHLCV(symbol: string, timeframe: string, limit: number): Promise<Candle[]> {
