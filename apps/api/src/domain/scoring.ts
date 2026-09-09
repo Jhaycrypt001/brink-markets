@@ -16,7 +16,11 @@ function finite(value: number | undefined): value is number {
 
 export function scoreMarket(
   market: BinaryMarket,
-  { now = Date.now(), minimumSecondsLeft = 300, maximumBookAgeMs = 15_000 }: ScoringOptions = {}
+  // These markets are short-interval (they roll over frequently), so the
+  // tradeability window is deliberately tight: a live two-sided book with at
+  // least ~45s of runway is enough to route an IOC order. A 5-minute gate here
+  // would wrongly mark genuinely-tradeable short markets as untradeable.
+  { now = Date.now(), minimumSecondsLeft = 45, maximumBookAgeMs = 15_000 }: ScoringOptions = {}
 ): ScoredMarket {
   const secondsLeft = market.expiry - now / 1_000;
   const book = market.orderBook;

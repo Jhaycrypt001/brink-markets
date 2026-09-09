@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWalletBalance } from "thirdweb/react";
 import { useWallet, shortAddress, somniaShannon, thirdwebClient } from "@/components/dashboard/wallet";
 import { PositionsPanel } from "@/components/dashboard/positions-panel";
+import { GlassButton } from "@/components/ui/glass-button";
 import { PANEL, PageHeader } from "./_shared";
 import { cn } from "@/lib/utils";
 
@@ -30,13 +31,9 @@ export function WalletView() {
               ? "You're connected — switch to Somnia Shannon to continue."
               : "Discovery is read-only. Connect a wallet only when you're ready to sign."}
           </p>
-          <button
-            type="button"
-            onClick={wallet.open}
-            className="mt-6 rounded-lg bg-highlighter-green px-6 py-3 text-[12px] font-bold uppercase tracking-wider text-press-black transition hover:brightness-105"
-          >
+          <GlassButton tone="green" size="lg" onClick={wallet.open} className="mt-6">
             {wallet.status === "connected" ? "Switch network" : "Connect wallet"}
-          </button>
+          </GlassButton>
         </div>
       </div>
     );
@@ -99,14 +96,11 @@ function BalanceCard({ address, onDeposit }: { address: string; onDeposit: () =>
         <span className="ml-2 text-[1.25rem] text-muted-sage/60">{data?.symbol ?? "STT"}</span>
       </p>
       <p className="mt-2 text-[13px] text-muted-sage/55">
-        Live Somnia balance. Fund your wallet to sign orders.
+        Live STT balance (gas). You also need testnet USDC to buy and sell — grab both from the faucet.
       </p>
-      <button
-        onClick={onDeposit}
-        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-highlighter-green px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
-      >
+      <GlassButton tone="green" onClick={onDeposit} className="mt-5">
         <ArrowDownToLine className="h-4 w-4" /> Deposit
-      </button>
+      </GlassButton>
     </div>
   );
 }
@@ -177,7 +171,9 @@ function DepositModal({ open, onClose, address }: { open: boolean; onClose: () =
             </div>
 
             <p className="mt-5 text-[13px] leading-relaxed text-muted-sage/70">
-              Get free testnet tokens from the Somnia faucet, or send funds to your address below.
+              Trading needs two things: <span className="font-semibold text-bone-white">STT</span> for gas and
+              <span className="font-semibold text-bone-white"> testnet USDC</span> as your trading balance. Claim
+              both from the Somnia faucet, or send them to your address below.
             </p>
 
             <div className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">

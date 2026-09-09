@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { Plug, ShieldCheck } from "lucide-react";
 import { useWallet } from "@/components/dashboard/wallet";
+import { GlassButton } from "@/components/ui/glass-button";
 
 /**
  * RequireWallet — gates a section behind a connected wallet on Somnia. Until the
@@ -29,14 +30,10 @@ export function RequireWallet({ title, children }: { title: string; children: Re
             : `Every figure on ${title} is either your own balance or a write signed by your address. There's nothing to show until a wallet is connected.`}
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            onClick={wallet.open}
-            className="inline-flex items-center gap-2 rounded-lg bg-highlighter-green px-5 py-3 text-[12px] font-bold uppercase tracking-wider text-press-black transition hover:brightness-105"
-          >
+          <GlassButton tone="green" size="lg" onClick={wallet.open}>
             {needsNetwork ? <ShieldCheck className="h-4 w-4" /> : <Plug className="h-4 w-4" />}
             {needsNetwork ? "Switch network" : "Connect wallet"}
-          </button>
+          </GlassButton>
           <a href="/docs" className="text-[13px] text-muted-sage/70 underline underline-offset-4 hover:text-bone-white">
             Full walkthrough
           </a>

@@ -34,7 +34,7 @@ describe("scoreMarket", () => {
   });
 
   it("rejects markets without expiry headroom", () => {
-    const result = scoreMarket(market({ expiry: now / 1000 + 120 }), { now });
+    const result = scoreMarket(market({ expiry: now / 1000 + 20 }), { now });
     expect(result.tradeable).toBe(false);
     expect(result.reasons).toContain("Too close to expiry");
   });

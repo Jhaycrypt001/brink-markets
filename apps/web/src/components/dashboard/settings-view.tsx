@@ -16,10 +16,11 @@ const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
  */
 export function SettingsView() {
   const prefs = usePrefs();
-  const notifBlocked =
-    (prefs.tradeableAlerts || prefs.expiryWarnings) &&
-    prefs.notifPermission !== "granted" &&
-    prefs.notifPermission !== "unsupported";
+  const wantsNotif = prefs.tradeableAlerts || prefs.expiryWarnings;
+  // "default" → we can still ask (Allow prompt). "denied" → only the user can
+  // re-enable it in browser site settings; JS cannot. Be honest about which.
+  const needsAllow = wantsNotif && prefs.notifPermission === "default";
+  const browserDenied = wantsNotif && prefs.notifPermission === "denied";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -37,9 +38,25 @@ export function SettingsView() {
       </Section>
 
       <Section title="Notifications" icon={Bell}>
-        {notifBlocked && (
-          <p className="px-5 pt-3 text-[12px] text-[#e0b06a]">
-            Browser notifications are blocked. Allow notifications for this site to receive alerts.
+        {needsAllow && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.04] bg-highlighter-green/[0.04] px-5 py-3">
+            <p className="text-[12px] text-[#e0b06a]">
+              Your browser hasn't granted notifications yet. Enable them to receive alerts on your desktop.
+            </p>
+            <button
+              type="button"
+              onClick={prefs.requestNotifPermission}
+              className="rounded-lg bg-highlighter-green px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-press-black hover:brightness-105"
+            >
+              Enable browser notifications
+            </button>
+          </div>
+        )}
+        {browserDenied && (
+          <p className="border-b border-white/[0.04] bg-[#e08a8a]/[0.06] px-5 py-3 text-[12px] text-[#e08a8a]">
+            Notifications are blocked for this site in your browser. Turn them back on in your browser's
+            site settings (the lock icon in the address bar) — apps can't do it for you. In-app alerts in
+            the bell still work.
           </p>
         )}
         <Toggle prefKey="tradeableAlerts" label="Tradeable alerts" hint="Notify when a market clears every gate." />

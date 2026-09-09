@@ -37,6 +37,8 @@ export function TradeTicket({ market }: { market: ScoredMarket }) {
   const canSubmit = validQty && validPrice && !!account && status.kind !== "signing" && market.tradeable;
 
   const notTradeable = !market.tradeable;
+  // Surface the actual blocking reason from scoring instead of a generic line.
+  const blockReason = market.reasons.find((r) => r !== "Ready to trade") ?? "It isn't trading on-chain right now.";
 
   async function submit() {
     if (!account || !canSubmit) return;
@@ -92,7 +94,7 @@ export function TradeTicket({ market }: { market: ScoredMarket }) {
 
         {notTradeable && (
           <p className="rounded-lg bg-white/[0.04] px-3 py-2 text-[11px] text-muted-sage/60">
-            This market isn't tradeable right now — it must be Trading on-chain with a fresh book.
+            Can't trade this one right now — {blockReason.toLowerCase()}.
           </p>
         )}
 

@@ -26,6 +26,7 @@ const DEFAULTS: Prefs = {
 type PrefsContext = Prefs & {
   set: (key: PrefKey, value: boolean) => void;
   notifPermission: NotificationPermission | "unsupported";
+  requestNotifPermission: () => void;
   playTick: () => void;
 };
 
@@ -110,9 +111,18 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     [playTick]
   );
 
+  const requestNotifPermission = useCallback(() => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "default") {
+      void Notification.requestPermission().then(setNotifPermission);
+    } else {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
   const value = useMemo<PrefsContext>(
-    () => ({ ...prefs, set, notifPermission, playTick }),
-    [prefs, set, notifPermission, playTick]
+    () => ({ ...prefs, set, notifPermission, requestNotifPermission, playTick }),
+    [prefs, set, notifPermission, requestNotifPermission, playTick]
   );
 
   return (
