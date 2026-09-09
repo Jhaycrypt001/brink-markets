@@ -105,7 +105,7 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
           <h1 className="font-display text-[1.6rem] leading-none tracking-[-0.03em]">Brink AI</h1>
           <p className="text-[12px] text-muted-sage/55">
             {aiLive === false
-              ? "Offline heuristic — set ANTHROPIC_API_KEY to enable the LLM"
+              ? "Offline heuristic — add a free Gemini key to enable the LLM"
               : "Natural-language market discovery, grounded in the live feed"}
           </p>
         </div>
