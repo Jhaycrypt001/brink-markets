@@ -65,12 +65,23 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 }
 
 /** Avatar box: shows the uploaded picture, else the fallback initials. Caller
- *  styles size/shape/background via className. */
-export function ProfileAvatar({ fallback, className }: { fallback: string; className?: string }) {
+ *  styles size/shape/background via className. Pass `showImage={false}` (e.g.
+ *  when no wallet is connected) to suppress the stored picture and render the
+ *  neutral fallback instead — the profile is an identity on top of a wallet, so
+ *  it must not linger once you disconnect. */
+export function ProfileAvatar({
+  fallback,
+  className,
+  showImage = true
+}: {
+  fallback: ReactNode;
+  className?: string;
+  showImage?: boolean;
+}) {
   const { avatar } = useProfile();
   return (
     <span className={cn("relative flex items-center justify-center overflow-hidden", className)}>
-      {avatar ? (
+      {showImage && avatar ? (
         <img src={avatar} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         fallback

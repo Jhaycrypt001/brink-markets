@@ -245,6 +245,7 @@ function ProfileChip({ collapsed }: { collapsed: boolean }) {
     >
       <ProfileAvatar
         fallback={initials}
+        showImage={wallet.ready}
         className={cn(
           "h-8 w-8 shrink-0 rounded-full text-[12px] font-bold",
           wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.08] text-muted-sage/60"

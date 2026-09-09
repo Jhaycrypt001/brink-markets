@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Bot, ArrowUp, Sparkles } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
 import type { ScoredMarket, AiTurn } from "@/lib/markets";
 import { formatDuration, askBrinkAI, fetchAiConfigured } from "@/lib/markets";
+import { PromptBox } from "@/components/ui/prompt-box";
 import { PANEL } from "./_shared";
 import { cn } from "@/lib/utils";
 
@@ -161,28 +162,14 @@ export function BrinkAiView({ markets }: { markets: ScoredMarket[] }) {
         </div>
       )}
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send(input);
-        }}
-        className="mt-3 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2"
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Brink AI…"
-          className="h-9 flex-1 bg-transparent text-[13px] text-bone-white placeholder:text-muted-sage/40 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || thinking}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-highlighter-green text-press-black transition disabled:opacity-40"
-          aria-label="Send"
-        >
-          <ArrowUp className="h-4 w-4" />
-        </button>
-      </form>
+      <PromptBox
+        value={input}
+        onChange={setInput}
+        onSubmit={() => void send(input)}
+        disabled={thinking}
+        busy={thinking}
+        className="mt-3"
+      />
     </div>
   );
 }

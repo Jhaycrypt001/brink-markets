@@ -116,28 +116,34 @@ function ProfileCard() {
         <div className="relative">
           <ProfileAvatar
             fallback={initials}
+            showImage={wallet.ready}
             className={cn(
               "h-20 w-20 rounded-2xl text-[24px] font-bold",
               wallet.ready ? "bg-gradient-to-br from-highlighter-green to-[#12a52c] text-press-black" : "bg-white/[0.06] text-muted-sage/60"
             )}
           />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="absolute -bottom-1.5 -right-1.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#0c0f0d] bg-highlighter-green text-press-black hover:brightness-105"
-            aria-label="Upload profile picture"
-          >
-            <Camera className="h-4 w-4" />
-          </button>
-          {avatar && (
-            <button
-              type="button"
-              onClick={() => setAvatar(null)}
-              className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0c0f0d] bg-white/[0.15] text-bone-white hover:bg-white/[0.25]"
-              aria-label="Remove profile picture"
-            >
-              <X className="h-3 w-3" />
-            </button>
+          {/* Profile editing requires a connected wallet — the identity it hangs on. */}
+          {wallet.ready && (
+            <>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="absolute -bottom-1.5 -right-1.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#0c0f0d] bg-highlighter-green text-press-black hover:brightness-105"
+                aria-label="Upload profile picture"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+              {avatar && (
+                <button
+                  type="button"
+                  onClick={() => setAvatar(null)}
+                  className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#0c0f0d] bg-white/[0.15] text-bone-white hover:bg-white/[0.25]"
+                  aria-label="Remove profile picture"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </>
           )}
           <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
         </div>
@@ -146,17 +152,18 @@ function ProfileCard() {
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-sage/45">Display name</label>
           <div className="mt-1.5 flex items-center gap-2">
             <input
-              value={name}
+              value={wallet.ready ? name : ""}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && saveName()}
               maxLength={40}
-              placeholder={wallet.ready ? shortAddress(wallet.address ?? "") : "Your name"}
-              className="h-10 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-[14px] text-bone-white placeholder:text-muted-sage/40 focus:border-white/[0.16] focus:outline-none"
+              disabled={!wallet.ready}
+              placeholder={wallet.ready ? shortAddress(wallet.address ?? "") : "Connect a wallet to set a name"}
+              className="h-10 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-[14px] text-bone-white placeholder:text-muted-sage/40 focus:border-white/[0.16] focus:outline-none disabled:opacity-50"
             />
             <button
               type="button"
               onClick={saveName}
-              disabled={name.trim() === displayName}
+              disabled={!wallet.ready || name.trim() === displayName}
               className="rounded-lg bg-highlighter-green px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider text-press-black transition hover:brightness-105 disabled:opacity-40"
             >
               {saved ? "Saved" : "Save"}
