@@ -21,11 +21,12 @@ type CharProps = {
   index: number;
   centerIndex: number;
   progress: MotionValue<number>;
+  spread: number;
 };
 
-function Character({ char, index, centerIndex, progress }: CharProps) {
+function Character({ char, index, centerIndex, progress, spread }: CharProps) {
   const distance = index - centerIndex;
-  const x = useTransform(progress, [0, 0.5], [distance * 42, 0]);
+  const x = useTransform(progress, [0, 0.5], [distance * spread, 0]);
   const rotateX = useTransform(progress, [0, 0.5], [distance * 40, 0]);
   const opacity = useTransform(progress, [0, 0.42], [0.12, 1]);
   const isSpace = char === " ";
@@ -56,6 +57,12 @@ export function ScrollAssembleText({
 
   const characters = [...text];
   const centerIndex = Math.floor(characters.length / 2);
+  // Scale the scatter distance to the viewport so characters don't fling off a
+  // phone screen. The outermost char sits at (chars/2 * spread) px from center,
+  // so cap the total spread to roughly the available half-width.
+  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
+  const halfCount = Math.max(1, centerIndex);
+  const spread = Math.min(42, Math.floor((viewportWidth * 0.42) / halfCount));
 
   if (reduceMotion) {
     return (
@@ -76,6 +83,7 @@ export function ScrollAssembleText({
               index={index}
               centerIndex={centerIndex}
               progress={scrollYProgress}
+              spread={spread}
             />
           ))}
         </p>

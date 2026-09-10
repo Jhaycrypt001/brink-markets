@@ -85,6 +85,21 @@
   }
 }
 
+/* Site-wide guard: never allow horizontal scrolling on any screen. `clip`
+   (not `hidden`) blocks sideways overflow without creating a scroll container,
+   so it doesn't break `position: sticky` headers or vertical scrolling. This
+   catches transient overflow from entrance animations (e.g. the assembling
+   headline or a section's reveal-from-x transform) and any off-by-a-few-pixels
+   element at phone widths. Applied to the React mount node rather than <html>,
+   because overflow on the root element is propagated to the viewport and does
+   not clip reliably. */
+html {
+  overflow-x: clip;
+}
+#root {
+  overflow-x: clip;
+}
+
 /* -------------------------------------------------------------------------
    Glass button — the "liquid glass" control (see components/ui/glass-button).
    A translucent, blurred surface with an inner light edge and a green glow
@@ -227,14 +242,17 @@
 @media (min-width: 1280px) {
   .brink-dashboard {
     zoom: 0.9;
-    /* zoom shrinks 100vh to ~90vh, exposing the page bg at the bottom — grow
-       min-height by 1/zoom so it still fills the viewport after scaling. */
-    min-height: 111.2vh;
   }
 }
 @media (min-width: 1680px) {
   .brink-dashboard {
     zoom: 0.85;
-    min-height: 117.7vh;
   }
+}
+/* The dashboard paints its own dark ground (and the body is dark while it is
+   mounted), so the shrink from `zoom` needs no min-height compensation — that
+   only forced a permanent scrollbar. Never let the dashboard scroll sideways
+   on any width: content clips instead of pushing a horizontal scrollbar. */
+.brink-dashboard {
+  overflow-x: clip;
 }
