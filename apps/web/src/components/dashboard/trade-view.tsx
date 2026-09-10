@@ -33,7 +33,7 @@ export function TradeView({
     <div className="space-y-4">
       <MarketHeader market={selected} elapsed={elapsed} />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className={cn(PANEL, "min-h-[320px] overflow-hidden")}>
           <PriceChart market={selected} />
         </div>

@@ -205,7 +205,7 @@ function TradeSkeleton() {
   return (
     <div className="space-y-4">
       <div className="h-16 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.02]" />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="h-80 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.02]" />
         <div className="h-80 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.02]" />
       </div>
