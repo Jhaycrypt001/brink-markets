@@ -16,7 +16,11 @@ const source = env.SOMNIA_INDEXER_URL && env.SOMNIA_WS_RPC_URL
     }))
   : new EmptyMarketSource();
 const app = await buildApp(source, env.MARKET_CACHE_TTL_MS, env.CORS_ORIGIN, env.MARKET_CACHE_STALE_MS, env.MARKET_MAX_RESULTS);
-await app.listen({ host: env.API_HOST, port: env.API_PORT });
+// Hosts like Railway/Render inject PORT and expect the app on 0.0.0.0. Locally,
+// fall back to the configured host/port (127.0.0.1:8787).
+const port = process.env.PORT ? Number(process.env.PORT) : env.API_PORT;
+const host = process.env.PORT ? "0.0.0.0" : env.API_HOST;
+await app.listen({ host, port });
 
 // Say plainly, at startup, whether Brink AI has a key — so a missing/misplaced
 // GEMINI_API_KEY is obvious in the terminal instead of a silent "HEURISTIC".
