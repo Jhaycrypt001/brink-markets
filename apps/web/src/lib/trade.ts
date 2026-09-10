@@ -132,8 +132,10 @@ export type Position = {
   shares: number;
   /** Avg entry price (0..1), from this wallet's buy fills. null if unknown. */
   avgCost: number | null;
-  /** Current sellable price = best bid (0..1). null if the book has no bid. */
+  /** Fair mark = mid of bid/ask (0..1). Used for value + unrealized PnL. */
   markPrice: number | null;
+  /** Best bid (0..1) — the price you'd actually sell into to Close now. */
+  bid: number | null;
   /** shares × avgCost (what you paid), in USDC. */
   costBasis: number | null;
   /** shares × markPrice (what it's worth now), in USDC. null if unmarked. */
@@ -182,12 +184,17 @@ export async function fetchPositions(account: Account): Promise<Position[]> {
       const agg = buyAgg.get(symbol);
       const avgCost = agg && agg.qty > 0 ? agg.cost / agg.qty : null;
 
+      let bid: number | null = null;
       let markPrice: number | null = null;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const book: any = await exchange.fetchOrderBook(symbol, 1);
         const bestBid = book?.bids?.[0]?.[0];
-        markPrice = typeof bestBid === "number" ? bestBid : null;
+        const bestAsk = book?.asks?.[0]?.[0];
+        bid = typeof bestBid === "number" ? bestBid : null;
+        const ask = typeof bestAsk === "number" ? bestAsk : null;
+        // Mark to the mid so a fresh position isn't shown down by the spread.
+        markPrice = bid !== null && ask !== null ? (bid + ask) / 2 : (bid ?? ask);
       } catch {
         markPrice = null;
       }
@@ -196,7 +203,7 @@ export async function fetchPositions(account: Account): Promise<Position[]> {
       const value = markPrice !== null ? shares * markPrice : null;
       const unrealizedPnl = value !== null && costBasis !== null ? value - costBasis : null;
 
-      return { symbol, marketRef, outcome, shares, avgCost, markPrice, costBasis, value, unrealizedPnl };
+      return { symbol, marketRef, outcome, shares, avgCost, markPrice, bid, costBasis, value, unrealizedPnl };
     })
   );
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { RefreshCw, Loader2, Coins, TrendingUp, Share2 } from "lucide-react";
+import { RefreshCw, Loader2, Coins, TrendingUp, Share2, LogOut } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
-import { fetchPositions, redeemPosition, type Position } from "@/lib/trade";
+import { fetchPositions, redeemPosition, placeBrinkOrder, type Position } from "@/lib/trade";
 import { useNotifications } from "@/components/dashboard/notifications";
 import { PnlCardModal } from "@/components/dashboard/pnl-card";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export function PositionsPnl() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [redeeming, setRedeeming] = useState<string | null>(null);
+  const [closing, setClosing] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [shareOf, setShareOf] = useState<Position | null>(null);
 
@@ -60,6 +61,24 @@ export function PositionsPnl() {
       );
     } finally {
       setRedeeming(null);
+    }
+  }
+
+  // Close now = sell your shares back into the book at the bid (IOC), realizing
+  // your P&L into USDC immediately — whether you're up or down.
+  async function close(p: Position) {
+    if (!account || p.bid === null) return;
+    setClosing(p.symbol);
+    setNote(null);
+    try {
+      await placeBrinkOrder({ account, symbol: p.symbol, side: "sell", quantity: p.shares, price: p.bid, timeInForce: "IOC" });
+      setNote("Closed — the proceeds are back in your Trading balance.");
+      inbox.push("Position closed", `Sold ${p.shares} ${p.outcome} @ ${Math.round(p.bid * 100)}¢ · ${tidy(p.marketRef)}`);
+      await load();
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Close failed — the book may be too thin to sell into right now.");
+    } finally {
+      setClosing(null);
     }
   }
 
@@ -104,7 +123,7 @@ export function PositionsPnl() {
       ) : positions.length === 0 ? (
         <Empty text={state === "loading" ? "Loading positions…" : "No positions yet. Buy a market and your holdings appear here with live P&L."} />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="no-scrollbar overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-[12px]">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-muted-sage/40">
@@ -145,6 +164,16 @@ export function PositionsPnl() {
                           aria-label="Share position"
                         >
                           <Share2 className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void close(p)}
+                          disabled={closing === p.symbol || p.bid === null}
+                          title={p.bid === null ? "No bid to sell into right now" : "Sell now and realize your P&L"}
+                          className="inline-flex items-center gap-1 rounded-md border border-highlighter-green/25 bg-highlighter-green/[0.08] px-2.5 py-1 text-[11px] font-semibold text-highlighter-green hover:bg-highlighter-green/[0.14] disabled:opacity-40"
+                        >
+                          {closing === p.symbol ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
+                          Close
                         </button>
                         <button
                           type="button"

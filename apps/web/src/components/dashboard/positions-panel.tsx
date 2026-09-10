@@ -88,7 +88,7 @@ export function PositionsPanel() {
         orders.length === 0 ? (
           <Empty text={loading ? "Loading your orders…" : "No open orders. Placed orders that rest appear here."} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="no-scrollbar overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-[12px]">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-muted-sage/40">
