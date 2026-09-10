@@ -17,5 +17,13 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  return envSchema.parse(source);
+  // Hosts like Railway inject variables as EMPTY STRINGS ("") rather than
+  // leaving them unset. Zod's .default() only fills in `undefined`, so an
+  // empty NODE_ENV="" would fail the enum and crash the app at boot. Drop
+  // empty values so every schema default applies as intended.
+  const cleaned: Record<string, string> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (value !== undefined && value !== "") cleaned[key] = value;
+  }
+  return envSchema.parse(cleaned);
 }
