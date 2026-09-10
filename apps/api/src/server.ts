@@ -41,6 +41,18 @@ app.log.info(
     : "Brink AI: NO key found — running heuristic. Set GEMINI_API_KEY in the repo-root .env and restart."
 );
 
+// Keep the HTTP server alive if a *background* dependency misbehaves — e.g. the
+// Somnia SDK's WebSocket erroring out in a network-restricted host. Without
+// these, one unhandled socket error would take down the whole process and the
+// platform would report "Application failed to respond". We log and stay up;
+// affected routes degrade (empty market source) instead of crashing /health.
+process.on("unhandledRejection", (reason) => {
+  app.log.error({ reason }, "unhandledRejection — kept alive");
+});
+process.on("uncaughtException", (err) => {
+  app.log.error({ err }, "uncaughtException — kept alive");
+});
+
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, "shutting down");
   await app.close();
