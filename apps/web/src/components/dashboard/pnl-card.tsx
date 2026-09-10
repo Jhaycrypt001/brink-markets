@@ -151,8 +151,13 @@ function drawCard(canvas: HTMLCanvasElement, p: Position, pct: number | null) {
   const big = pct !== null ? `${up ? "+" : ""}${pct.toFixed(2)}%` : `${up ? "+" : "-"}$${Math.abs(p.unrealizedPnl ?? 0).toFixed(2)}`;
   ctx.fillText(big, 60, 320);
 
-  // Entry / Now
-  const cents = (v: number | null) => (v === null ? "—" : Math.round(v * 100) + "¢");
+  // Entry / Now — show a half-cent of precision so the price matches the %
+  // (whole cents print clean, fractional prices show one decimal).
+  const cents = (v: number | null) => {
+    if (v === null) return "—";
+    const c = Math.round(v * 1000) / 10;
+    return (c % 1 === 0 ? c.toFixed(0) : c.toFixed(1)) + "¢";
+  };
   ctx.fillStyle = "rgba(200,210,200,0.55)";
   ctx.font = "500 22px Inter, system-ui, sans-serif";
   ctx.fillText("Entry", 64, 420);
