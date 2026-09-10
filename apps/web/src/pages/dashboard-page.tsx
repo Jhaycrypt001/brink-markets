@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, WifiOff, ServerCrash } from "lucide-react";
 import type { ScoredMarket } from "@/lib/markets";
 import { BrinkLoader } from "@/components/dashboard/brink-loader";
+import { BiometricLock } from "@/components/dashboard/biometric-lock";
+import { biometricEnabled } from "@/lib/biometric";
 import { AppSidebar, type DashView } from "@/components/dashboard/app-sidebar";
 import { AppTopbar } from "@/components/dashboard/app-topbar";
 import { TradeView } from "@/components/dashboard/trade-view";
@@ -45,6 +47,9 @@ function DashboardInner() {
   const [view, setView] = useState<DashView>("trade");
   const [collapsed, setCollapsed] = useState(() => readBool("brink.sidebar.collapsed", false));
   const [drawer, setDrawer] = useState(false);
+  // Biometric App Lock: if enabled on this device, hold the terminal behind a
+  // fingerprint/face check until it's unlocked this session.
+  const [locked, setLocked] = useState(() => biometricEnabled());
 
   // The site body is bone-white for the landing page; paint it dark while the
   // dashboard is mounted so no gap (e.g. from the desktop zoom) shows white.
@@ -84,6 +89,7 @@ function DashboardInner() {
   return (
     <div className="brink-dashboard min-h-screen bg-[#0c0f0d] text-bone-white">
       {intro && <BrinkLoader onComplete={() => setIntro(false)} />}
+      {!intro && locked && <BiometricLock onUnlock={() => setLocked(false)} />}
 
       <aside
         className={cn(

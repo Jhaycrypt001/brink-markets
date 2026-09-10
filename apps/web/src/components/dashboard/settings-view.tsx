@@ -1,9 +1,10 @@
-import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
-import { Copy, Check, Shield, Bell, Sparkles, Camera, X } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { Copy, Check, Shield, Bell, Sparkles, Camera, X, Fingerprint, Loader2 } from "lucide-react";
 import { PremiumToggle } from "@/components/ui/bouncy-toggle";
 import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { usePrefs, type PrefKey } from "@/components/dashboard/prefs";
 import { useProfile, ProfileAvatar, fileToAvatar } from "@/components/dashboard/profile";
+import { biometricEnabled, biometricSupported, registerBiometric, disableBiometric } from "@/lib/biometric";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -73,10 +74,95 @@ export function SettingsView() {
       </Section>
 
       <Section title="Security" icon={Shield}>
+        <AppLockRow />
         <Row label="API access" value="Read-only" />
         <Row label="Order signing" value="Wallet-held" />
         <Row label="Network" value="Somnia Shannon" />
       </Section>
+    </div>
+  );
+}
+
+/**
+ * AppLockRow — enroll or remove the device biometric lock. Enabling opens the
+ * platform's fingerprint/face prompt (WebAuthn); it's a per-device UI lock and
+ * is independent of the wallet, which still signs on-chain.
+ */
+function AppLockRow() {
+  const [supported, setSupported] = useState<boolean | null>(null);
+  const [enabled, setEnabled] = useState(() => biometricEnabled());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    void biometricSupported().then((ok) => {
+      if (alive) setSupported(ok);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function enable() {
+    setBusy(true);
+    setError("");
+    try {
+      await registerBiometric("Brink terminal");
+      setEnabled(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't enable the lock.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function disable() {
+    disableBiometric();
+    setEnabled(false);
+    setError("");
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+            enabled ? "bg-highlighter-green/12 text-highlighter-green" : "bg-white/[0.05] text-muted-sage/70"
+          )}
+        >
+          <Fingerprint className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-bone-white">Biometric App Lock</p>
+          <p className="mt-0.5 text-[12px] text-muted-sage/55">
+            {supported === false
+              ? "This device has no fingerprint or face unlock available."
+              : enabled
+                ? "Unlock the terminal with your fingerprint or face on this device."
+                : "Require your fingerprint or face to open the terminal on this device."}
+          </p>
+          {error && <p className="mt-1 text-[12px] text-[#e08a8a]">{error}</p>}
+        </div>
+      </div>
+
+      {supported !== false && (
+        <button
+          type="button"
+          onClick={enabled ? disable : () => void enable()}
+          disabled={busy || supported === null}
+          className={cn(
+            "shrink-0 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wider transition disabled:opacity-50",
+            enabled
+              ? "border border-white/[0.08] bg-white/[0.03] text-muted-sage/80 hover:text-bone-white"
+              : "bg-highlighter-green text-press-black hover:brightness-105"
+          )}
+        >
+          {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          {enabled ? "Turn off" : "Enable"}
+        </button>
+      )}
     </div>
   );
 }
