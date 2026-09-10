@@ -70,9 +70,14 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
   // checks, server-to-server) are always allowed.
   const origins = corsOrigin.split(",").map((value) => value.trim()).filter(Boolean);
   const localOriginRe = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+  // Vercel serves the stable production domain PLUS a fresh hashed URL for every
+  // deploy/preview (e.g. brink-markets-web-<hash>-<team>.vercel.app). Allow all
+  // of this project's Vercel origins so redeploys and previews keep working
+  // without editing CORS_ORIGIN each time.
+  const vercelOriginRe = /^https:\/\/brink-markets[a-z0-9-]*\.vercel\.app$/i;
   await app.register(cors, {
     origin(origin, cb) {
-      if (!origin || localOriginRe.test(origin) || origins.includes(origin)) cb(null, true);
+      if (!origin || localOriginRe.test(origin) || vercelOriginRe.test(origin) || origins.includes(origin)) cb(null, true);
       else cb(null, false);
     }
   });
