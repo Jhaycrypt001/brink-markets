@@ -123,74 +123,67 @@ export function PositionsPnl() {
       ) : positions.length === 0 ? (
         <Empty text={state === "loading" ? "Loading positions…" : "No positions yet. Buy a market and your holdings appear here with live P&L."} />
       ) : (
-        <div className="no-scrollbar overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-[12px]">
-            <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-muted-sage/40">
-                <Th className="pl-4">Position</Th>
-                <Th>Shares</Th>
-                <Th>Avg</Th>
-                <Th>Mark</Th>
-                <Th>Value</Th>
-                <Th>P&L</Th>
-                <Th className="pr-4 text-right">Action</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {positions.map((p) => {
-                const pnl = p.unrealizedPnl;
-                const pct = p.costBasis && p.costBasis > 0 && pnl !== null ? (pnl / p.costBasis) * 100 : null;
-                return (
-                  <tr key={p.symbol} className="border-t border-white/[0.04]">
-                    <td className="py-2.5 pl-4">
-                      <div className="flex items-center gap-2">
-                        <OutcomeTag outcome={p.outcome} />
-                        <span className="text-bone-white">{tidy(p.marketRef)}</span>
-                      </div>
-                    </td>
-                    <td className="tabular-nums text-muted-sage/80">{p.shares}</td>
-                    <td className="tabular-nums text-muted-sage/80">{cents(p.avgCost)}</td>
-                    <td className="tabular-nums text-bone-white">{cents(p.markPrice)}</td>
-                    <td className="tabular-nums text-bone-white">{usd(p.value)}</td>
-                    <td className={cn("tabular-nums font-semibold", pnl === null ? "text-muted-sage/60" : pnl >= 0 ? "text-highlighter-green" : "text-[#e08a8a]")}>
+        <div className="divide-y divide-white/[0.04]">
+          {positions.map((p) => {
+            const pnl = p.unrealizedPnl;
+            const pct = p.costBasis && p.costBasis > 0 && pnl !== null ? (pnl / p.costBasis) * 100 : null;
+            const pnlColor = pnl === null ? "text-muted-sage/60" : pnl >= 0 ? "text-highlighter-green" : "text-[#e08a8a]";
+            return (
+              <div key={p.symbol} className="p-3 sm:px-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <OutcomeTag outcome={p.outcome} />
+                    <span className="truncate text-[13px] font-medium text-bone-white">{tidy(p.marketRef)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShareOf(p)}
+                    className="shrink-0 rounded-md border border-white/[0.08] bg-white/[0.03] p-1.5 text-muted-sage/70 hover:text-bone-white"
+                    aria-label="Share position"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
+                  <Cell label="Shares" value={String(p.shares)} />
+                  <Cell label="Avg" value={cents(p.avgCost)} />
+                  <Cell label="Mark" value={cents(p.markPrice)} />
+                  <Cell label="Value" value={usd(p.value)} />
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-sage/45">Unrealized P&L</p>
+                    <p className={cn("text-[15px] font-semibold tabular-nums", pnlColor)}>
                       {pnl === null ? "—" : `${usd(pnl)}${pct !== null ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)` : ""}`}
-                    </td>
-                    <td className="py-2 pr-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setShareOf(p)}
-                          className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[11px] font-semibold text-muted-sage/80 hover:text-bone-white"
-                          aria-label="Share position"
-                        >
-                          <Share2 className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void close(p)}
-                          disabled={closing === p.symbol || p.bid === null}
-                          title={p.bid === null ? "No bid to sell into right now" : "Sell now and realize your P&L"}
-                          className="inline-flex items-center gap-1 rounded-md border border-highlighter-green/25 bg-highlighter-green/[0.08] px-2.5 py-1 text-[11px] font-semibold text-highlighter-green hover:bg-highlighter-green/[0.14] disabled:opacity-40"
-                        >
-                          {closing === p.symbol ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
-                          Close
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void redeem(p)}
-                          disabled={redeeming === p.symbol}
-                          className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-muted-sage/80 hover:text-bone-white disabled:opacity-50"
-                        >
-                          {redeeming === p.symbol ? <Loader2 className="h-3 w-3 animate-spin" /> : <Coins className="h-3 w-3" />}
-                          Redeem
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void close(p)}
+                      disabled={closing === p.symbol || p.bid === null}
+                      title={p.bid === null ? "No bid to sell into right now" : "Sell now and realize your P&L"}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-highlighter-green/25 bg-highlighter-green/[0.08] px-3 py-2 text-[12px] font-semibold text-highlighter-green hover:bg-highlighter-green/[0.14] disabled:opacity-40"
+                    >
+                      {closing === p.symbol ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void redeem(p)}
+                      disabled={redeeming === p.symbol}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[12px] font-semibold text-muted-sage/80 hover:text-bone-white disabled:opacity-50"
+                    >
+                      {redeeming === p.symbol ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Coins className="h-3.5 w-3.5" />}
+                      Redeem
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -218,8 +211,13 @@ function OutcomeTag({ outcome }: { outcome: "YES" | "NO" }) {
   );
 }
 
-function Th({ children, className }: { children: ReactNode; className?: string }) {
-  return <th className={cn("px-2 py-2.5 font-semibold first:pl-4", className)}>{children}</th>;
+function Cell({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-wider text-muted-sage/45">{label}</p>
+      <p className={cn("mt-0.5 truncate text-[13px] font-medium tabular-nums text-bone-white", className)}>{value}</p>
+    </div>
+  );
 }
 
 function Empty({ text }: { text: string }) {
