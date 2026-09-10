@@ -47,6 +47,22 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
   const leaderboardCache = new TtlCache<LeaderEntry[]>(30_000, 120_000);
   const referrals = new ReferralStore();
 
+  // Lightweight in-memory per-IP limiter for the AI route — protects the LLM
+  // provider quota from a burst of public traffic. Sliding 60s window.
+  const aiHits = new Map<string, number[]>();
+  function aiRateLimited(ip: string, limit = 20, windowMs = 60_000): boolean {
+    const now = Date.now();
+    const recent = (aiHits.get(ip) ?? []).filter((t) => now - t < windowMs);
+    if (recent.length >= limit) {
+      aiHits.set(ip, recent);
+      return true;
+    }
+    recent.push(now);
+    aiHits.set(ip, recent);
+    if (aiHits.size > 5000) aiHits.clear(); // bound memory on a busy instance
+    return false;
+  }
+
   // CORS: explicitly-configured origins are always allowed, and ANY local
   // origin (localhost / 127.0.0.1 on any port) is allowed too — so the dev app
   // works whichever host+port Vite picks (5173, 5174, localhost vs 127.0.0.1)
@@ -142,6 +158,7 @@ export async function buildApp(source: MarketSource, cacheTtlMs: number, corsOri
   app.post<{ Body: { question?: string; history?: AiTurn[] } }>("/v1/ai", async (request, reply) => {
     reply.header("x-request-id", request.id);
     try {
+      if (aiRateLimited(request.ip)) return reply.code(429).send({ error: { code: "RATE_LIMITED", requestId: request.id } });
       const body = aiAskSchema.parse(request.body);
       // Short-circuit before touching the indexer if there's no key to call the
       // LLM with — the client uses this 503 to switch to its offline heuristic.
