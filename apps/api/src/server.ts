@@ -16,11 +16,21 @@ const source = env.SOMNIA_INDEXER_URL && env.SOMNIA_WS_RPC_URL
     }))
   : new EmptyMarketSource();
 const app = await buildApp(source, env.MARKET_CACHE_TTL_MS, env.CORS_ORIGIN, env.MARKET_CACHE_STALE_MS, env.MARKET_MAX_RESULTS);
-// Hosts like Railway/Render inject PORT and expect the app on 0.0.0.0. Locally,
-// fall back to the configured host/port (127.0.0.1:8787).
+// Hosts like Railway/Render must reach the app on 0.0.0.0 — binding 127.0.0.1
+// there makes the container unreachable ("Application failed to respond").
+// Treat it as a deployed context if PORT is injected, NODE_ENV=production, or
+// any Railway/Render marker is present, and bind 0.0.0.0 then. Only true local
+// dev (none of those) keeps 127.0.0.1. PORT wins for the port when set.
+const deployed = Boolean(
+  process.env.PORT ||
+    process.env.NODE_ENV === "production" ||
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RENDER
+);
 const port = process.env.PORT ? Number(process.env.PORT) : env.API_PORT;
-const host = process.env.PORT ? "0.0.0.0" : env.API_HOST;
+const host = deployed ? "0.0.0.0" : env.API_HOST;
 await app.listen({ host, port });
+app.log.info(`brink-api listening on ${host}:${port} (deployed=${deployed}, PORT=${process.env.PORT ?? "unset"})`);
 
 // Say plainly, at startup, whether Brink AI has a key — so a missing/misplaced
 // GEMINI_API_KEY is obvious in the terminal instead of a silent "HEURISTIC".
