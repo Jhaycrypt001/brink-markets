@@ -227,10 +227,14 @@
 @media (min-width: 1280px) {
   .brink-dashboard {
     zoom: 0.9;
+    /* zoom shrinks 100vh to ~90vh, exposing the page bg at the bottom — grow
+       min-height by 1/zoom so it still fills the viewport after scaling. */
+    min-height: 111.2vh;
   }
 }
 @media (min-width: 1680px) {
   .brink-dashboard {
     zoom: 0.85;
+    min-height: 117.7vh;
   }
 }

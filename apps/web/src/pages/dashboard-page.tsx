@@ -46,6 +46,16 @@ function DashboardInner() {
   const [collapsed, setCollapsed] = useState(() => readBool("brink.sidebar.collapsed", false));
   const [drawer, setDrawer] = useState(false);
 
+  // The site body is bone-white for the landing page; paint it dark while the
+  // dashboard is mounted so no gap (e.g. from the desktop zoom) shows white.
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = "#0c0f0d";
+    return () => {
+      document.body.style.backgroundColor = prev;
+    };
+  }, []);
+
   useEffect(() => {
     if (!selectedId && feed.ranked[0]) setSelectedId(feed.ranked[0].marketId);
   }, [feed.ranked, selectedId]);
