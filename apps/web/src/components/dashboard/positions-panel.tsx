@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { RefreshCw, X, AlertTriangle, Loader2, ArrowUpRight } from "lucide-react";
+import { RefreshCw, X, AlertTriangle, Loader2, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
 import { fetchOpenOrders, fetchMyFills, cancelBrinkOrder, type OpenOrder, type Fill } from "@/lib/trade";
 import { useNotifications } from "@/components/dashboard/notifications";
@@ -21,6 +21,15 @@ export function PositionsPanel({ onOpenMarket }: { onOpenMarket?: (symbol: strin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [fillsPage, setFillsPage] = useState(0);
+
+  // Keep the fills list short: show a page at a time with Prev/Next.
+  const FILLS_PER_PAGE = 6;
+  const fillsPageCount = Math.max(1, Math.ceil(fills.length / FILLS_PER_PAGE));
+  // Clamp the page if the list shrank (e.g. after a refresh) so we never land on
+  // an empty page past the end.
+  const safeFillsPage = Math.min(fillsPage, fillsPageCount - 1);
+  const pagedFills = fills.slice(safeFillsPage * FILLS_PER_PAGE, safeFillsPage * FILLS_PER_PAGE + FILLS_PER_PAGE);
 
   const load = useCallback(async () => {
     if (!account) return;
@@ -128,6 +137,7 @@ export function PositionsPanel({ onOpenMarket }: { onOpenMarket?: (symbol: strin
       ) : fills.length === 0 ? (
         <Empty text={loading ? "Loading fills…" : "No fills yet. Executed trades appear here."} />
       ) : (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-[12px]">
             <thead>
@@ -140,7 +150,7 @@ export function PositionsPanel({ onOpenMarket }: { onOpenMarket?: (symbol: strin
               </tr>
             </thead>
             <tbody>
-              {fills.map((t) => (
+              {pagedFills.map((t) => (
                 <tr
                   key={t.id}
                   onClick={() => onOpenMarket?.(t.symbol)}
@@ -165,8 +175,41 @@ export function PositionsPanel({ onOpenMarket }: { onOpenMarket?: (symbol: strin
             </tbody>
           </table>
         </div>
+        {fillsPageCount > 1 && (
+          <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-2.5">
+            <span className="text-[11px] text-muted-sage/50">
+              Page {safeFillsPage + 1} of {fillsPageCount}
+              <span className="ml-2 text-muted-sage/35">· {fills.length} fills</span>
+            </span>
+            <div className="flex items-center gap-1.5">
+              <PageBtn onClick={() => setFillsPage((p) => Math.max(0, p - 1))} disabled={safeFillsPage === 0}>
+                <ChevronLeft className="h-3.5 w-3.5" /> Prev
+              </PageBtn>
+              <PageBtn
+                onClick={() => setFillsPage((p) => Math.min(fillsPageCount - 1, p + 1))}
+                disabled={safeFillsPage >= fillsPageCount - 1}
+              >
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </PageBtn>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
+  );
+}
+
+function PageBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-muted-sage/80 transition-colors hover:text-bone-white disabled:cursor-not-allowed disabled:opacity-35"
+    >
+      {children}
+    </button>
   );
 }
 
