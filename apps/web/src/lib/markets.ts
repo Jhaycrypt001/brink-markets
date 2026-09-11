@@ -161,8 +161,11 @@ export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   if (s < 60) return s + "s";
   const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return m + "m " + String(rem).padStart(2, "0") + "s";
+  if (m < 60) return m + "m " + String(s % 60).padStart(2, "0") + "s";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h " + String(m % 60).padStart(2, "0") + "m";
+  const d = Math.floor(h / 24);
+  return d + "d " + String(h % 24).padStart(2, "0") + "h";
 }
 
 export function formatPrice(price: number | undefined): string {
