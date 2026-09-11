@@ -6,7 +6,8 @@ import { formatDuration, formatCompact } from "@/lib/markets";
 import { PriceChart } from "./price-chart";
 import { OrderBook } from "./order-book";
 import { TradeTicket } from "./trade-ticket";
-import { OpenOrdersStrip, useOpenOrders } from "./positions-panel";
+import { OpenOrdersStrip, PositionsPanel, useOpenOrders } from "./positions-panel";
+import { PositionsPnl } from "./positions-pnl";
 import { cn } from "@/lib/utils";
 
 const PANEL = "rounded-xl border border-white/[0.06] bg-white/[0.015]";
@@ -15,11 +16,13 @@ export function TradeView({
   markets,
   selected,
   onSelect,
+  onOpenMarket,
   elapsed
 }: {
   markets: ScoredMarket[];
   selected: ScoredMarket;
   onSelect: (market: ScoredMarket) => void;
+  onOpenMarket?: (symbol: string) => void;
   elapsed: number;
 }) {
   const account = useActiveAccount();
@@ -48,6 +51,10 @@ export function TradeView({
       </div>
 
       <OpenOrdersStrip {...openOrders} />
+
+      {/* Your live positions, right under the chart where you trade — tap a card
+          to jump to that market. */}
+      <PositionsPnl onOpenMarket={onOpenMarket} />
 
       <MarketsTable markets={markets} selected={selected} onSelect={onSelect} elapsed={elapsed} />
     </div>

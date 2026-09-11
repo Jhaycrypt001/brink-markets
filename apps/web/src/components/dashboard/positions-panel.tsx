@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { RefreshCw, X, AlertTriangle, Loader2 } from "lucide-react";
+import { RefreshCw, X, AlertTriangle, Loader2, ArrowUpRight } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
 import { fetchOpenOrders, fetchMyFills, cancelBrinkOrder, type OpenOrder, type Fill } from "@/lib/trade";
 import { useNotifications } from "@/components/dashboard/notifications";
@@ -12,7 +12,7 @@ type Tab = "orders" | "fills";
  * read from the markets SDK. Open orders can be cancelled (signed by the wallet).
  * Nothing is mocked; an empty board means the account simply has none.
  */
-export function PositionsPanel() {
+export function PositionsPanel({ onOpenMarket }: { onOpenMarket?: (symbol: string) => void } = {}) {
   const account = useActiveAccount();
   const inbox = useNotifications();
   const [tab, setTab] = useState<Tab>("orders");
@@ -141,8 +141,21 @@ export function PositionsPanel() {
             </thead>
             <tbody>
               {fills.map((t) => (
-                <tr key={t.id} className="border-t border-white/[0.04]">
-                  <td className="py-2.5 pl-4 text-bone-white">{tidy(t.symbol)}</td>
+                <tr
+                  key={t.id}
+                  onClick={() => onOpenMarket?.(t.symbol)}
+                  title={onOpenMarket ? "Open this market" : undefined}
+                  className={cn(
+                    "border-t border-white/[0.04]",
+                    onOpenMarket && "cursor-pointer transition-colors hover:bg-white/[0.03]"
+                  )}
+                >
+                  <td className="py-2.5 pl-4 text-bone-white">
+                    <span className="inline-flex items-center gap-1.5">
+                      {tidy(t.symbol)}
+                      {onOpenMarket && <ArrowUpRight className="h-3 w-3 text-muted-sage/40" />}
+                    </span>
+                  </td>
                   <td><SideTag side={t.side} /></td>
                   <td className="tabular-nums text-bone-white">{Math.round(t.price * 100)}¢</td>
                   <td className="tabular-nums text-muted-sage/80">{t.amount}</td>

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const FAUCET_URL = "https://testnet.somnia.network/";
 const EXPLORER = "https://shannon-explorer.somnia.network/address/";
 
-export function WalletView() {
+export function WalletView({ onOpenMarket }: { onOpenMarket?: (symbol: string) => void } = {}) {
   const wallet = useWallet();
   const [depositOpen, setDepositOpen] = useState(false);
 
@@ -60,8 +60,8 @@ export function WalletView() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <BalanceCard address={wallet.address ?? ""} onDeposit={() => setDepositOpen(true)} />
-          <PositionsPnl />
-          <PositionsPanel />
+          <PositionsPnl onOpenMarket={onOpenMarket} />
+          <PositionsPanel onOpenMarket={onOpenMarket} />
         </div>
 
         <div className="space-y-4">

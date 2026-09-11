@@ -15,7 +15,7 @@ const usd = (v: number | null) => (v === null ? "—" : (v < 0 ? "-$" : "$") + M
  * a Redeem action to collect winnings once a market resolves. Holdings, mark
  * price, and redemption are all on-chain; nothing is mocked.
  */
-export function PositionsPnl() {
+export function PositionsPnl({ onOpenMarket }: { onOpenMarket?: (symbol: string) => void } = {}) {
   const account = useActiveAccount();
   const inbox = useNotifications();
   const [positions, setPositions] = useState<Position[]>([]);
@@ -131,10 +131,19 @@ export function PositionsPnl() {
             return (
               <div key={p.symbol} className="p-3 sm:px-4">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenMarket?.(p.symbol)}
+                    disabled={!onOpenMarket}
+                    title={onOpenMarket ? "Open this market" : undefined}
+                    className={cn(
+                      "flex min-w-0 items-center gap-2 rounded-md text-left",
+                      onOpenMarket && "-mx-1 px-1 py-0.5 hover:bg-white/[0.04]"
+                    )}
+                  >
                     <OutcomeTag outcome={p.outcome} />
                     <span className="truncate text-[13px] font-medium text-bone-white">{tidy(p.marketRef)}</span>
-                  </div>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setShareOf(p)}

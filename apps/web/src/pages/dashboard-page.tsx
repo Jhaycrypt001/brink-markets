@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, WifiOff, ServerCrash } from "lucide-react";
 import type { ScoredMarket } from "@/lib/markets";
@@ -86,6 +86,25 @@ function DashboardInner() {
     window.scrollTo(0, 0);
   }
 
+  // Open the trade view for a market referenced by its symbol (e.g. tapping a
+  // fill or a position card). Tolerant of the YES/NO suffix so a "...#YES" fill
+  // resolves to its market. No-ops if that market isn't in the live feed.
+  const openBySymbol = useCallback(
+    (symbol: string) => {
+      const base = symbol.split("#")[0];
+      const m =
+        feed.ranked.find((x) => x.symbol === symbol) ??
+        feed.ranked.find((x) => x.symbol.split("#")[0] === base);
+      if (m) {
+        setSelectedId(m.marketId);
+        setView("trade");
+        setDrawer(false);
+        window.scrollTo(0, 0);
+      }
+    },
+    [feed.ranked]
+  );
+
   return (
     <div className="brink-dashboard min-h-screen bg-[#0c0f0d] text-bone-white">
       {intro && <BrinkLoader onComplete={() => setIntro(false)} />}
@@ -147,6 +166,7 @@ function DashboardInner() {
                   markets={feed.ranked}
                   selected={selected}
                   onSelect={(m) => setSelectedId(m.marketId)}
+                  onOpenMarket={openBySymbol}
                   elapsed={feed.elapsed}
                 />
               ) : (
@@ -177,7 +197,7 @@ function DashboardInner() {
               <LeaderboardView />
             </RequireWallet>
           )}
-          {view === "wallet" && <WalletView />}
+          {view === "wallet" && <WalletView onOpenMarket={openBySymbol} />}
           {view === "referrals" && (
             <RequireWallet title="Referrals">
               <ReferralsView />
