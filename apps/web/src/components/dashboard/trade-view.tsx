@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
 import type { ScoredMarket } from "@/lib/markets";
@@ -34,7 +34,7 @@ export function TradeView({
 
   return (
     <div className="space-y-4">
-      <MarketHeader market={selected} elapsed={elapsed} />
+      <MarketHeader market={selected} markets={markets} onSelect={onSelect} elapsed={elapsed} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className={cn(PANEL, "min-h-[320px] overflow-hidden")}>
@@ -61,22 +61,89 @@ export function TradeView({
   );
 }
 
-function MarketHeader({ market, elapsed }: { market: ScoredMarket; elapsed: number }) {
+function MarketHeader({
+  market,
+  markets,
+  onSelect,
+  elapsed
+}: {
+  market: ScoredMarket;
+  markets: ScoredMarket[];
+  onSelect: (m: ScoredMarket) => void;
+  elapsed: number;
+}) {
   const yes = Math.round((market.bestAsk ?? 0.5) * 100);
   const secondsLeft = Math.max(0, market.secondsLeft - elapsed);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // markets arrive ranked by Brink Score; offer the top handful to switch to.
+  const top = useMemo(() => markets.slice(0, 6), [markets]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
 
   return (
     <div className={cn(PANEL, "flex flex-wrap items-center gap-x-4 gap-y-3 px-3 py-3 sm:gap-x-6 sm:px-4")}>
-      <button type="button" className="flex items-center gap-2.5 rounded-lg bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.05]">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-[11px] font-bold text-bone-white">
-          {market.asset.slice(0, 3)}
-        </span>
-        <div>
-          <p className="text-[13px] font-semibold text-bone-white">{market.asset} · Event</p>
-          <p className="max-w-[220px] truncate text-[11px] text-muted-sage/60">{market.question}</p>
-        </div>
-        <ChevronDown className="h-4 w-4 text-muted-sage/50" />
-      </button>
+      <div className="relative" ref={ref}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex items-center gap-2.5 rounded-lg bg-white/[0.03] px-3 py-2 text-left hover:bg-white/[0.05]"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-[11px] font-bold text-bone-white">
+            {market.asset.slice(0, 3)}
+          </span>
+          <div>
+            <p className="text-[13px] font-semibold text-bone-white">{market.asset} · Event</p>
+            <p className="max-w-[220px] truncate text-[11px] text-muted-sage/60">{market.question}</p>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-sage/50 transition-transform", open && "rotate-180")} />
+        </button>
+
+        {open && (
+          <div className="absolute left-0 top-[calc(100%+6px)] z-40 w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/[0.08] bg-[#121613] shadow-2xl">
+            <p className="border-b border-white/[0.06] px-3 py-2 text-[10px] uppercase tracking-wider text-muted-sage/45">
+              Switch market · top by Brink Score
+            </p>
+            <div className="max-h-[320px] overflow-y-auto py-1">
+              {top.map((m) => {
+                const active = m.marketId === market.marketId;
+                return (
+                  <button
+                    key={m.marketId}
+                    type="button"
+                    onClick={() => {
+                      onSelect(m);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-white/[0.04]",
+                      active && "bg-highlighter-green/[0.06]"
+                    )}
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[10px] font-bold text-bone-white">
+                      {m.asset.slice(0, 3)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12px] font-medium text-bone-white">{m.question}</span>
+                      <span className="block text-[10px] text-muted-sage/50">
+                        {m.asset} · {Math.round((m.bestAsk ?? 0.5) * 100)}¢ YES
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-highlighter-green">{m.score.toFixed(1)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-baseline gap-2">
         <span className="font-display text-[1.75rem] leading-none tracking-[-0.03em] text-bone-white tabular-nums">

@@ -151,7 +151,14 @@ function DashboardInner() {
       </AnimatePresence>
 
       <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[68px]" : "lg:pl-[240px]")}>
-        <AppTopbar onOpenMenu={() => setDrawer(true)} source={feed.source} loading={feed.loading} onRefresh={() => void feed.refresh()} />
+        <AppTopbar
+          onOpenMenu={() => setDrawer(true)}
+          source={feed.source}
+          loading={feed.loading}
+          onRefresh={() => void feed.refresh()}
+          markets={feed.ranked}
+          onSelectMarket={openMarket}
+        />
 
         <main
           className="mx-auto max-w-[1400px] px-3 py-4 sm:px-5 sm:py-6"

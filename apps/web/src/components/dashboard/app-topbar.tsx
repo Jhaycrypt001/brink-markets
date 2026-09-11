@@ -1,22 +1,27 @@
-import { useEffect, useRef, useState } from "react";
-import { Menu, Search, Bell, Wifi, WifiOff, RefreshCw, Wallet, Check, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Menu, Search, Bell, Wifi, WifiOff, RefreshCw, Wallet, Check, Trash2, ArrowUpRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet, shortAddress } from "@/components/dashboard/wallet";
 import { useNotifications } from "@/components/dashboard/notifications";
 import { useProfile, ProfileAvatar } from "@/components/dashboard/profile";
 import { GlassButton } from "@/components/ui/glass-button";
+import type { ScoredMarket } from "@/lib/markets";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar({
   onOpenMenu,
   source,
   loading,
-  onRefresh
+  onRefresh,
+  markets = [],
+  onSelectMarket
 }: {
   onOpenMenu: () => void;
   source: "live" | "empty" | "offline";
   loading: boolean;
   onRefresh: () => void;
+  markets?: ScoredMarket[];
+  onSelectMarket?: (m: ScoredMarket) => void;
 }) {
   const isLive = source === "live";
   const label = source === "live" ? "Live" : source === "empty" ? "No feed" : "Offline";
@@ -35,14 +40,7 @@ export function AppTopbar({
         <Menu className="h-5 w-5" />
       </button>
 
-      <label className="relative hidden min-w-0 max-w-md flex-1 items-center sm:flex">
-        <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-sage/40" />
-        <input
-          type="search"
-          placeholder="Search markets, assets…"
-          className="h-10 w-full rounded-lg border border-white/[0.06] bg-white/[0.03] pl-9 pr-3 text-[13px] text-bone-white placeholder:text-muted-sage/40 focus:border-white/[0.12] focus:outline-none"
-        />
-      </label>
+      <MarketSearch markets={markets} onSelectMarket={onSelectMarket} />
       {/* On phones the search is hidden; keep the actions pinned right. */}
       <div className="flex-1 sm:hidden" />
 
@@ -91,6 +89,97 @@ export function AppTopbar({
         )}
       </div>
     </header>
+  );
+}
+
+/**
+ * MarketSearch — a live filter over the ranked feed. Typing matches on asset,
+ * question or symbol; picking a result opens that market in the trade view.
+ * Hidden on phones (the market header's dropdown covers switching there).
+ */
+function MarketSearch({ markets, onSelectMarket }: { markets: ScoredMarket[]; onSelectMarket?: (m: ScoredMarket) => void }) {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const results = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return [];
+    return markets
+      .filter(
+        (m) =>
+          m.asset.toLowerCase().includes(term) ||
+          m.question.toLowerCase().includes(term) ||
+          m.symbol.toLowerCase().includes(term)
+      )
+      .slice(0, 8);
+  }, [q, markets]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  function pick(m: ScoredMarket) {
+    onSelectMarket?.(m);
+    setQ("");
+    setOpen(false);
+  }
+
+  return (
+    <div ref={ref} className="relative hidden min-w-0 max-w-md flex-1 sm:block">
+      <div className="relative flex items-center">
+        <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-sage/40" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && results[0]) pick(results[0]);
+            if (e.key === "Escape") setOpen(false);
+          }}
+          placeholder="Search markets, assets…"
+          className="h-10 w-full rounded-lg border border-white/[0.06] bg-white/[0.03] pl-9 pr-3 text-[13px] text-bone-white placeholder:text-muted-sage/40 focus:border-white/[0.12] focus:outline-none"
+        />
+      </div>
+      {open && q.trim() && (
+        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-full overflow-hidden rounded-xl border border-white/[0.08] bg-[#121613] shadow-2xl">
+          {results.length === 0 ? (
+            <p className="px-3 py-3 text-[12px] text-muted-sage/50">No markets match “{q.trim()}”.</p>
+          ) : (
+            <div className="max-h-[360px] overflow-y-auto py-1">
+              {results.map((m) => (
+                <button
+                  key={m.marketId}
+                  type="button"
+                  onClick={() => pick(m)}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-white/[0.04]"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[10px] font-bold text-bone-white">
+                    {m.asset.slice(0, 3)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12px] font-medium text-bone-white">{m.question}</span>
+                    <span className="block text-[10px] text-muted-sage/50">
+                      {m.asset} · {Math.round((m.bestAsk ?? 0.5) * 100)}¢ YES
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-highlighter-green">{m.score.toFixed(1)}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-sage/40" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
